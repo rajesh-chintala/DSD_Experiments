@@ -957,6 +957,10 @@ In a practical hardware implementation, the following would also be considered:
 
 <img width="1213" height="684" alt="image" src="https://github.com/user-attachments/assets/62e89f79-d457-4c32-aff6-44eb7b3604c3" />
 
+# Technology Schematic:
+<img width="1642" height="878" alt="image" src="https://github.com/user-attachments/assets/f42e1548-d0b6-4e75-893a-bfbcb13f1040" />
+
+
 # Part-7: Constraints:
 
 ```
