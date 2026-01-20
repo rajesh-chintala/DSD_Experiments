@@ -828,7 +828,7 @@ In a practical implementation, additional aspects would be considered:
 <img width="1225" height="678" alt="image" src="https://github.com/user-attachments/assets/15a88959-e94c-45b3-8291-3167638c5d98" />
 
 # **Part - 7: Constraints for implementation after eloboration**
-'''
+```  
 create_clock -period 10 -name Clock [get_ports Clock]
 
 set_property PACKAGE_PIN E3 [get_ports Clock]
@@ -883,7 +883,7 @@ set_property IOSTANDARD LVCMOS33 [get_ports {Sum[2]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {Sum[3]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {Sum[1]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {Sum[0]}]
-'''
+```
 
 # Part - 7: Final Summary
 
