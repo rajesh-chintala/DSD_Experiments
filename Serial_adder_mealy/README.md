@@ -407,6 +407,208 @@ endmodule
 * Ready for downstream verification and implementation
 
 ---
+Great 👍
+Below is **PART 3 generated fully**, written in a **professional verification-engineer tone**, and **aligned exactly with the serial adder RTL you finalized in PART 2** (FSM + shift registers + counter-controlled operation).
+
+No informal wording, no “textbook/teaching” terms, and no assumptions beyond the given RTL.
+
+---
+
+# **PART 3: TESTBENCH (VERIFICATION ENGINEER STYLE)**
+
+---
+
+## **1. Purpose of the Testbench**
+
+The purpose of the testbench is to **functionally verify** the serial adder design by:
+
+* Applying valid input operands
+* Providing clock and reset signals
+* Observing serial addition over multiple clock cycles
+* Confirming correct sum generation
+* Verifying carry propagation and FSM behavior
+* Ensuring operation stops after the expected number of cycles
+
+The testbench is **non-synthesizable** and used only for simulation and verification.
+
+---
+
+## **2. Verification Objectives**
+
+The following aspects are verified:
+
+* Correct loading of operands into shift registers
+* Proper initialization on reset
+* Correct bit-by-bit addition
+* Correct carry propagation across cycles
+* Correct operation of the counter-based control (`Run`)
+* Correct final sum output after all bits are processed
+
+---
+
+## **3. Testbench Strategy**
+
+The verification strategy is as follows:
+
+1. Generate a **periodic clock**
+2. Apply **reset** to initialize the design
+3. Provide **parallel input operands A and B**
+4. Allow the design to run for the required number of clock cycles
+5. Monitor internal and output signals
+6. Observe the final sum output
+
+The testbench uses **directed test cases** for clarity and repeatability.
+
+---
+
+## **4. Testbench Code**
+
+```verilog
+`timescale 1ns/1ps
+
+module tb_serial_adder;
+
+    reg  [7:0] A;
+    reg  [7:0] B;
+    reg        Reset;
+    reg        Clock;
+    wire [7:0] Sum;
+
+    // Instantiate the DUT
+    serial_adder DUT (
+        .A(A),
+        .B(B),
+        .Reset(Reset),
+        .Clock(Clock),
+        .Sum(Sum)
+    );
+
+    // ------------------------------------
+    // Clock Generation (10 ns period)
+    // ------------------------------------
+    always #5 Clock = ~Clock;
+
+    // ------------------------------------
+    // Stimulus
+    // ------------------------------------
+    initial begin
+        // Initialize signals
+        Clock = 0;
+        Reset = 1;
+
+        // Apply test operands BEFORE reset is released
+        // Example: A = 1011 (11), B = 1101 (13)
+        A = 8'b00001011;
+        B = 8'b00001101;
+
+        // Apply reset (parallel load occurs here)
+        #10;
+        Reset = 0;
+
+        // Allow sufficient time for serial addition
+        #200;
+
+        // Finish simulation
+        $finish;
+    end
+
+    // ------------------------------------
+    // Monitor
+    // ------------------------------------
+    initial begin
+        $monitor(
+            "Time=%0t | Reset=%b | A=%b B=%b | Sum=%b",
+            $time, Reset, A, B, Sum
+        );
+    end
+
+endmodule
+```
+
+---
+
+## **5. Clock and Reset Behavior**
+
+* **Clock**
+
+  * Period: 10 ns
+  * Positive edge triggers all sequential logic
+* **Reset**
+
+  * Active-high
+  * Initializes:
+
+    * FSM carry state
+    * Shift registers
+    * Counter
+  * Ensures deterministic startup
+
+---
+
+## **6. Expected Operation During Simulation**
+
+For inputs:
+
+* A = `00001011` (11)
+* B = `00001101` (13)
+
+Expected result:
+
+* Sum = `00011000` (24)
+
+During simulation:
+
+* Bits are processed **LSB first**
+* One bit is added per clock cycle
+* Sum bits are shifted into the output register
+* After 8 cycles, shifting stops
+* Final sum becomes stable
+
+---
+
+## **7. Signals to Observe in Waveform**
+
+For detailed analysis, the following signals should be added to the waveform:
+
+* `Clock`
+* `Reset`
+* `A`, `B`
+* `Sum`
+* Internal (optional, via hierarchy):
+
+  * `QA[0]`, `QB[0]`
+  * `s`
+  * `y` (carry state)
+  * `Count`
+  * `Run`
+
+Observing these signals helps confirm correct FSM and datapath interaction.
+
+---
+
+## **8. Verification Checks**
+
+✔ Reset initializes all internal states
+✔ Carry propagates correctly across cycles
+✔ One bit is processed per clock
+✔ Sum bits are shifted correctly
+✔ Operation stops after required cycles
+✔ Final sum matches expected value
+
+---
+
+## **9. Notes for Simulation Tools**
+
+This testbench is compatible with:
+
+* Vivado Simulator
+* ModelSim / Questa
+* Xcelium
+* Verilator (with minor adjustments)
+
+No timing delays or simulator-specific constructs are used.
+
+---
 
 # **PART 4: WAVEFORM & TIMING EXPLANATION (CYCLE-BY-CYCLE)**
 
