@@ -957,5 +957,71 @@ In a practical hardware implementation, the following would also be considered:
 
 <img width="1213" height="684" alt="image" src="https://github.com/user-attachments/assets/62e89f79-d457-4c32-aff6-44eb7b3604c3" />
 
+# Part-7: Constraints:
 
-  
+```
+create_clock -period 10 -name Clock [get_ports Clock]
+
+set_property PACKAGE_PIN E3 [get_ports Clock]
+set_property IOSTANDARD LVCMOS33 [get_ports Clock]
+set_property PACKAGE_PIN V10 [get_ports {A[7]}]
+set_property PACKAGE_PIN U11 [get_ports {A[6]}]
+set_property PACKAGE_PIN U12 [get_ports {A[5]}]
+set_property PACKAGE_PIN H6 [get_ports {A[4]}]
+set_property PACKAGE_PIN T13 [get_ports {A[3]}]
+set_property PACKAGE_PIN R16 [get_ports {A[2]}]
+set_property PACKAGE_PIN U8 [get_ports {A[1]}]
+set_property PACKAGE_PIN T8 [get_ports {A[0]}]
+set_property PACKAGE_PIN R13 [get_ports {B[7]}]
+set_property PACKAGE_PIN U18 [get_ports {B[6]}]
+set_property PACKAGE_PIN T18 [get_ports {B[5]}]
+set_property PACKAGE_PIN R17 [get_ports {B[4]}]
+set_property PACKAGE_PIN R15 [get_ports {B[3]}]
+set_property PACKAGE_PIN M13 [get_ports {B[2]}]
+set_property PACKAGE_PIN L16 [get_ports {B[1]}]
+set_property PACKAGE_PIN J15 [get_ports {B[0]}]
+set_property PACKAGE_PIN N17 [get_ports Reset]
+set_property PACKAGE_PIN V11 [get_ports {Sum[7]}]
+set_property PACKAGE_PIN V12 [get_ports {Sum[6]}]
+set_property PACKAGE_PIN V14 [get_ports {Sum[5]}]
+set_property PACKAGE_PIN V15 [get_ports {Sum[4]}]
+set_property PACKAGE_PIN T16 [get_ports {Sum[3]}]
+set_property PACKAGE_PIN U14 [get_ports {Sum[2]}]
+set_property PACKAGE_PIN T15 [get_ports {Sum[1]}]
+set_property PACKAGE_PIN V16 [get_ports {Sum[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports Reset]
+set_property IOSTANDARD LVCMOS33 [get_ports {A[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {A[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {A[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {A[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {A[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {A[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {A[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {A[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {B[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {B[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {B[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {B[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {B[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {B[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {B[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {B[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Sum[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Sum[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Sum[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Sum[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Sum[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Sum[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Sum[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Sum[0]}]
+
+```
+
+# Part-8: Final Summary:
+
+<img width="1625" height="877" alt="image" src="https://github.com/user-attachments/assets/616e83e3-e55b-4a66-9210-29cf344c6c37" />
+<img width="1630" height="885" alt="image" src="https://github.com/user-attachments/assets/7516e705-1a07-4e79-ac2c-4fbea1ef044a" />
+<img width="817" height="165" alt="image" src="https://github.com/user-attachments/assets/4edadcba-f149-42da-8fbd-539cdb453c5b" />
+
+
+
