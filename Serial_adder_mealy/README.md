@@ -1029,6 +1029,12 @@ In a practical implementation, additional aspects would be considered:
 ---
 <img width="1225" height="678" alt="image" src="https://github.com/user-attachments/assets/15a88959-e94c-45b3-8291-3167638c5d98" />
 
+# Technology Schematic:
+
+---
+<img width="1640" height="874" alt="image" src="https://github.com/user-attachments/assets/55a87056-a908-40b5-a6f8-37c65f77eafb" />
+
+
 # **Part - 7: Constraints for implementation after eloboration**
 ```  
 create_clock -period 10 -name Clock [get_ports Clock]
