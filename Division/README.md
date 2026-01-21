@@ -1576,4 +1576,146 @@ set_property IOSTANDARD LVCMOS33 [get_ports {Q[3]}]
 <img width="1642" height="849" alt="image" src="https://github.com/user-attachments/assets/58bd68b0-cf74-4362-8e94-e6dc583bd7cd" />
 <img width="824" height="163" alt="image" src="https://github.com/user-attachments/assets/04613158-f27d-4e73-9c18-84a960e195c2" />
 
+---
+
+# **SHORT ANSWERS – DIVIDER EXPERIMENT**
+
+---
+
+## **A) Viva Questions (University / Lab-Oriented)**
+
+1. **Why is division a sequential operation?**
+   Division requires repeated comparison, subtraction, and shifting, which depend on previous results, making it inherently sequential.
+
+2. **Role of FSM in the divider?**
+   The FSM sequences initialization, iterative division, and completion while generating correct control signals.
+
+3. **Why is subtraction performed every cycle?**
+   Subtraction is always evaluated to generate `Cout`, which decides remainder update and quotient bit.
+
+4. **Significance of `Cout`?**
+   `Cout` indicates whether `R ≥ B` and simultaneously generates the quotient bit.
+
+5. **Why quotient is generated one cycle earlier than insertion?**
+   The quotient bit is computed during subtraction and inserted during the next shift operation.
+
+6. **Why split remainder into `R` and `R0`?**
+   Splitting simplifies shifting and allows combining shift and subtract in one FSM state.
+
+7. **Why register A has dual role?**
+   It stores the dividend initially and accumulates quotient bits during division.
+
+8. **How FSM ensures exactly `n` iterations?**
+   A down-counter is used, and the FSM terminates when the counter reaches zero.
+
+9. **What if `s` remains high continuously?**
+   The FSM stays in the done state until `s` is deasserted.
+
+10. **Why are `LA` and `EB` external inputs?**
+    They explicitly control operand loading, improving clarity and testbench control.
+
+11. **Why outputs valid only when `Done = 1`?**
+    Before completion, quotient and remainder are still being updated.
+
+12. **Relation to binary long division?**
+    The hardware mimics long division using shift, subtract, and decision steps.
+
+---
+
+## **B) Interview-Style Questions (Industry)**
+
+1. **How to support signed division?**
+   Use sign preprocessing, perform unsigned division, then correct sign of outputs.
+
+2. **Restoring vs Non-restoring division?**
+   Non-restoring reduces cycles but increases control complexity.
+
+3. **How to pipeline this divider?**
+   Split shift, subtract, and decision into pipeline stages.
+
+4. **Why use a down-counter?**
+   It provides deterministic iteration control with minimal hardware.
+
+5. **How to parameterize the design?**
+   Use Verilog parameters for operand width and counter size.
+
+6. **Risk of combinational `Cout` usage?**
+   Can cause timing hazards and incorrect FSM decisions.
+
+7. **CPU datapath integration?**
+   Divider acts as a multi-cycle execution unit with start/done handshake.
+
+8. **How is synthesis safety ensured?**
+   By using synchronous logic, no delays, and no latches.
+
+9. **Corner case: Dividend < Divisor?**
+   Quotient becomes zero, remainder equals dividend.
+
+10. **Formal verification approach?**
+    Use assertions checking `Q*B + R = A` when `Done = 1`.
+
+---
+
+## **C) Debug Scenarios**
+
+1. **Blocking assignment in FSM register – problem?**
+   Causes race conditions and simulation-synthesis mismatch.
+
+2. **Why quotient seems delayed?**
+   Quotient is generated from `Cout` and inserted in the next shift cycle.
+
+3. **Remainder always changing – cause?**
+   `LR` asserted unconditionally instead of depending on `Cout`.
+
+4. **Divider never finishes – reason?**
+   Counter not decremented or `z` flag misused.
+
+---
+
+## **D) Design Variations**
+
+1. **Parallel divider advantage?**
+   High speed but large area.
+
+2. **Non-restoring divider benefit?**
+   Fewer cycles.
+
+3. **Handshake-based divider use case?**
+   Better system-level integration.
+
+4. **Parameterized divider advantage?**
+   Scalable and reusable design.
+
+---
+
+## **E) Conceptual Reasoning**
+
+1. **Why separate datapath and control path?**
+   Improves clarity, modularity, and debug ease.
+
+2. **FSM vs random control logic?**
+   FSM guarantees deterministic and verifiable behavior.
+
+3. **Why quotient built MSB to LSB?**
+   Matches shift-based long division.
+
+4. **What breaks if subtraction skipped?**
+   `Cout` cannot be generated, breaking quotient logic.
+
+---
+
+## **F) Real-Chip Perspective**
+
+1. **Power optimization?**
+   Clock gating after `Done`.
+
+2. **Clocking strategy?**
+   Single synchronous clock domain.
+
+3. **CDC concern?**
+   If `s` comes from another clock, synchronization is required.
+
+4. **Verification strategy?**
+   Directed tests + assertions + coverage.
+
 
