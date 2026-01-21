@@ -265,22 +265,6 @@ The quotient bit for each iteration is **directly derived from `Cout`**.
 
 This is the mechanism by which register A **accumulates the quotient bits** over successive iterations.
 
-Excellent catch — you are **absolutely right**, and thank you for pointing this out.
-The FSM diagram you provided **clearly shows** two important things that must be reflected accurately in the text:
-
-1. **Additional control signals are present and essential**
-   → `LA`, `EB`, and `LR` were missing or under-specified
-2. **The ordering of operations matters**
-   → **Remainder update is controlled by `LR`**
-   → **Counter decrement (`EC`) occurs *after* evaluation of the zero flag `z`**, exactly as shown in the ASM
-
-Below is the **corrected, fully consistent rewrite** of:
-
-* **Control Path Architecture**
-* **FSM / ASM State Explanation**
-
-This version is now **fully faithful to the FSM diagram**, **datapath behavior**, and **textbook intent**.
-
 ---
 
 # **7. Control Path Architecture**
@@ -324,13 +308,56 @@ The control path ensures that:
 
 ---
 
-# **8. FSM / ASM State Description**
+## **8. Inputs and Outputs**
+
+---
+
+### **Top-Level Divider Signals**
+
+| Signal        | Description                                   |
+| ------------- | --------------------------------------------- |
+| `Clock`       | System clock controlling sequential operation |
+| `Resetn`      | Active-low reset for FSM and datapath         |
+| `s`           | Start signal to initiate division operation   |
+| `LA`          | Load enable for dividend register A           |
+| `EB`          | Load enable for divisor register B            |
+| `DataA [7:0]` | Parallel input representing the dividend      |
+| `DataB [7:0]` | Parallel input representing the divisor       |
+| `Q [7:0]`     | Parallel output representing the quotient     |
+| `R [7:0]`     | Parallel output representing the remainder    |
+| `Done`        | Indicates completion of division operation    |
+
+---
+
+### **Internal Signals (Conceptual)**
+
+| Signal       | Purpose                                                  |
+| ------------ | -------------------------------------------------------- |
+| `A`          | Dividend register initially; quotient register finally   |
+| `B`          | Divisor register                                         |
+| `R`          | Remainder register (upper bits)                          |
+| `R0` / `rr0` | Flip-flop holding LSB of remainder                       |
+| `Cout`       | Carry-out from subtraction indicating `R ≥ B` or `R < B` |
+| `Sum`        | Result of 2’s complement subtraction                     |
+| `y`          | Present FSM state                                        |
+| `Y`          | Next FSM state                                           |
+| `Count`      | Iteration counter                                        |
+| `z`          | Counter zero flag                                        |
+| `LR`         | Enables loading of remainder register                    |
+| `EA`         | Enables shift of dividend/quotient register              |
+| `ER`         | Enables shift of remainder register                      |
+| `Rsel`       | Selects subtraction result or holds remainder            |
+
+---
+
+
+# **9. FSM / ASM State Description**
 
 The FSM consists of **three main states**, with one **explicit shift-preparation step**, exactly as shown in the ASM diagram.
 
 ---
 
-## **8.1 State S1 — Initialization State**
+## **9.1 State S1 — Initialization State**
 
 **Purpose:**
 Initialize datapath registers and prepare for division.
@@ -357,7 +384,7 @@ Initialize datapath registers and prepare for division.
 
 ---
 
-## **8.2 Shift Preparation Step (EA, ER0)**
+## **9.2 Shift Preparation Step (EA, ER0)**
 
 **Purpose:**
 Prepare the datapath for the first iteration.
@@ -376,7 +403,7 @@ FSM then transitions to **State S2**.
 
 ---
 
-## **8.3 State S2 — Iterative Division State**
+## **9.3 State S2 — Iterative Division State**
 
 **Purpose:**
 Perform **one complete division iteration**.
@@ -405,7 +432,7 @@ Perform **one complete division iteration**.
 
 ---
 
-## **8.4 Remainder Update Control (`LR`)**
+## **9.4 Remainder Update Control (`LR`)**
 
 * The actual update of the remainder register occurs **only when `LR` is asserted**
 * `LR` is enabled conditionally based on the result of `Cout`
@@ -413,7 +440,7 @@ Perform **one complete division iteration**.
 
 ---
 
-## **8.5 Counter Check and Decrement (z and EC)**
+## **9.5 Counter Check and Decrement (z and EC)**
 
 After the operations in **State S2**:
 
@@ -429,7 +456,7 @@ This ordering is **explicitly shown in the FSM diagram** and is critical for cor
 
 ---
 
-## **8.6 State S3 — Done State**
+## **9.6 State S3 — Done State**
 
 **Purpose:**
 Indicate completion of the division process.
@@ -448,11 +475,38 @@ FSM remains in this state until reset.
 
 ---
 
-# **9. Division Operation Explained Using FSM and Datapath Together**
+## **9.7 FSM State–Based Control Signal Table**
+
+The following table summarizes the **control signal behavior across FSM states**, clearly indicating which signals are asserted in each state.
+
+---
+
+### **FSM Control Signal Activity**
+
+| Control Signal | **S1** (Initialization) | **Shift Prep** | **S2** (Iteration) | **S3** (Done) |
+| -------------- | ----------------------- | -------------- | ------------------ | ------------- |
+| `LA`           | 1                       | 0              | 0                  | 0             |
+| `EB`           | 1                       | 0              | 0                  | 0             |
+| `LR`           | 1                       | 0              | `Cout`             | 0             |
+| `ER`           | 1                       | 0              | 1                  | 0             |
+| `ER0`          | 0                       | 1              | 1                  | 0             |
+| `EA`           | 0                       | 1              | 1                  | 0             |
+| `Rsel`         | 0                       | 0              | 1                  | 0             |
+| `LC`           | 1                       | 0              | 0                  | 0             |
+| `EC`           | 0                       | 0              | 1*                 | 0             |
+| `Done`         | 0                       | 0              | 0                  | 1             |
+
+* `EC` is asserted **only after evaluating the zero flag (`z`)**.
+
+---
+
+# **10. Division Operation Explained Using FSM**
 
 This section explains the division example shown in the table by correlating **FSM states**, **control sequencing**, and **datapath behavior**, with precise clock-cycle timing.
 
 ---
+
+<img width="545" height="262" alt="image" src="https://github.com/user-attachments/assets/cad22d6f-74d2-4ccb-8d91-cf85710723d2" />
 
 ## **Initial Condition – FSM in State S1 (Initialization)**
 
@@ -648,154 +702,765 @@ The flip-flop **rr0** is not part of the final result.
 * Quotient bit is **inserted into A during the next shift**
 * The table notation **“Shift left, Q ← x”** always refers to the **previous cycle’s `Cout`**
 
+---
 
+# **PART 2: SYNTHESIZABLE VERILOG RTL (WITH SUBMODULES)**
 
+---
 
+```verilog
+//============================================================
+// Sequential Binary Divider
+// CONTROL PATH + DATAPATH (Textbook-Aligned)
+//============================================================
+module divider ( Clock, Resetn,s, LA, EB, DataA, DataB, Q, R, Done);
 
+    parameter n = 8;
+    parameter long = 3;
 
+    input              Clock;
+    input              Resetn;
+    input              s;          // start signal
+    input               LA;
+    input               EB;
+    input  [n-1:0]     DataA;       // dividend
+    input  [n-1:0]     DataB;       // divisor
+    output [n-1:0]     Q;           // quotient
+    output [n-1:0]     R;           // remainder
+    output reg         Done;
 
+    //============================================================
+    // INTERNAL SIGNAL DECLARATIONS
+    //============================================================
+    reg  [1:0] y, Y;
 
+    reg  LR, ER, ER0;
+    reg  EA;
+    reg  Rsel;
+    reg  LC, EC;
 
+    wire [n-1:0] A, B;
+    wire [n-1:0] DataR;
+    wire [n:0]   Sum;
+    wire         Cout;
+    wire         R0;
+    wire         z;
+    wire [long-1:0] Count;
 
+    //============================================================
+    // CONTROL PATH
+    //============================================================
+    parameter S1 = 2'b00,
+              S2 = 2'b01,
+              S3 = 2'b10;
 
+    always @(s, y, z) begin
+        case (y)
+            S1: if (s == 0) Y = S1;
+                else        Y = S2;
+            S2: if (z == 0) Y = S2;
+                else        Y = S3;
+            S3: if (s == 1) Y = S3;
+                else        Y = S1;
+            default: Y = S1;
+        endcase
+    end
 
+    always @(posedge Clock or negedge Resetn) begin
+        if (!Resetn)
+            y <= S1;
+        else
+            y <= Y;
+    end
 
-## **5. Datapath Operation Explained Using the Example (Step-by-Step)**
+    always @(y, Cout, z, s) begin
+        LA = 0; EB = 0;
+        LR = 0; ER = 0; ER0 = 0;
+        EA = 0; Rsel = 0;
+        LC = 0; EC = 0;
+        Done = 0;
 
-<img width="545" height="262" alt="image" src="https://github.com/user-attachments/assets/cad22d6f-74d2-4ccb-8d91-cf85710723d2" />
+        case (y)
+            S1: begin
+                LA = 1; EB = 1; LC = 1; ER = 1;
+                if (s == 0) begin
+                    LR = 1; ER0 = 0;
+                end else begin
+                    EA = 1; ER0 = 1;
+                end
+            end
 
-Consider the division:
+            S2: begin
+                ER = 1; ER0 = 1; EA = 1; Rsel = 1;
+                if (Cout) LR = 1;
+                if (!z) EC = 1;
+            end
 
+            S3: begin
+                Done = 1;
+            end
+        endcase
+    end
+
+    //============================================================
+    // DATAPATH
+    //============================================================
+    regne   RegB   (DataB, Clock, Resetn, EB, B);
+    defparam RegB.n = n;
+
+    shiftln ShiftA (DataA, LA, EA, Cout, Clock, A);
+    defparam ShiftA.n = n;
+    assign Q = A;
+
+    shiftln ShiftR (DataR, LR, ER, R0, Clock, R);
+    defparam ShiftR.n = n;
+
+    muxdff  FF_R0  (1'b0, A[n-1], ER0, Clock, R0);
+
+    downcount Counter (Clock, EC, LC, Count);
+    defparam Counter.n = long;
+    assign z = (Count == 0);
+
+    assign Sum  = {1'b0, R[n-2:0], R0} + {1'b0, ~B} + 1'b1;
+    assign Cout = Sum[n];
+
+    assign DataR = (Rsel) ? Sum[n-1:0] : 0;
+
+endmodule
 ```
-Dividend (A) = 10001100
-Divisor  (B) = 1001
-```
-
-### **Initial State (After Reset)**
-
-| Register | Value    |
-| -------- | -------- |
-| A        | 10001100 |
-| R        | 00000000 |
-| rr0      | 0        |
-| B        | 1001     |
 
 ---
 
-### **Cycle-by-Cycle Operation**
-
-Each cycle performs **one quotient decision**.
-
-| Cycle | Datapath Action | R (Remainder) | rr0 | A (Shifted) | 
-| ----- | --------------- | ------------- | --- | ----------- | 
-| 0     | Load A, B       | 00000000      | 0   | 10001100    | 
-| 1     | Shift left `(R|| A)` | 00000001      | 1   | 00011000    |
-| 2     | Shift, restore  | 00000010      | 0   | 00110000    | 
-| 3     | Shift, restore  | 00000100      | 0   | 01100000    |  
-| 4     | Shift, subtract | 00001001      | 1   | 11000000    |  
-| 5     | Subtract valid  | 00000000      | 1   | 10000001    |  
-| 6     | Shift, restore  | 00000001      | 0   | 00000010    |  
-| 7     | Shift, restore  | 00000011      | 0   | 00000100    | 
-| 8     | Subtract valid  | 00000001      | 1   | 00010001    | 
+## **SUBMODULES (TEXTBOOK-STYLE)**
 
 ---
 
-### **Final Result**
+### **Register with Enable (`regne`)**
 
-* **Quotient** → sequence of `rr0` values
-* **Remainder** → contents of register `R`
+```verilog
+module regne (D, Clock, Resetn, E, Q);
+    parameter n = 8;
+    input  [n-1:0] D;
+    input          Clock, Resetn, E;
+    output reg [n-1:0] Q;
 
-```
-Quotient  = 00010001
-Remainder = 00000001
+    always @(posedge Clock or negedge Resetn) begin
+        if (!Resetn)
+            Q <= 0;
+        else if (E)
+            Q <= D;
+    end
+endmodule
 ```
 
 ---
 
-## **6. Control Path Explanation (Flowchart / ASM View)**
+### **Left Shift Register with Load and Enable (`shiftln`)**
 
-The control path sequences datapath operations using an ASM-style flow.
+```verilog
+module shiftln (D, L, E, w, Clock, Q);
+    parameter n = 8;
+    input  [n-1:0] D;
+    input          L, E, w, Clock;
+    output reg [n-1:0] Q;
 
-### **Control Signals**
-
-| Signal | Function                  |
-| ------ | ------------------------- |
-| `LA`   | Load register A           |
-| `EB`   | Load register B           |
-| `EA`   | Enable shift of A         |
-| `LR`   | Load remainder            |
-| `ER`   | Enable shift of R         |
-| `ER0`  | Enable update of `rr0`    |
-| `Rsel` | Select subtract / restore |
-| `LC`   | Load counter              |
-| `EC`   | Enable counter            |
-| `Done` | Indicate completion       |
-
----
-
-### **Functional ASM States**
-
-* **Initialization** – Load operands, clear remainder
-* **Shift** – Shift `(R || A)` and capture MSB into `rr0`
-* **Subtract / Restore** – Compute `R − B` and decide
-* **Update** – Update registers and decrement counter
-* **Done** – Assert completion and hold outputs stable
-
-State transitions depend on:
-
-* Subtraction result (`Cout`)
-* Counter reaching zero
+    always @(posedge Clock) begin
+        if (L)
+            Q <= D;
+        else if (E)
+            Q <= {Q[n-2:0], w};
+    end
+endmodule
+```
 
 ---
 
-## **7. Inputs, Outputs, and Internal Signals**
+### **Multiplexed D Flip-Flop (`muxdff`)**
 
-### **Inputs**
+```verilog
+module muxdff (d0, d1, s, Clock, Q);
+    input d0, d1, s, Clock;
+    output reg Q;
 
-* `DataA` – Dividend
-* `DataB` – Divisor
-* `Clock`
-* `Reset`
-
-### **Outputs**
-
-* `A` – Quotient (implicit)
-* `R` – Remainder
-* `Done`
-
-### **Internal Signals**
-
-* `rr0` – Quotient bit
-* `Count` – Iteration counter
-* `Cout` – Subtraction result indicator
+    always @(posedge Clock) begin
+        if (s)
+            Q <= d1;
+        else
+            Q <= d0;
+    end
+endmodule
+```
 
 ---
 
-## **8. Overall Design Strategy**
+### **Down Counter (`downcount`)**
 
-* Explain division conceptually first
-* Justify sequential nature
-* Use FSM/ASM for control
-* Implement arithmetic in datapath
-* Avoid separate quotient register
-* Ensure clean separation of datapath and control
+```verilog
+module downcount (Clock, E, L, Q);
+    parameter n = 3;
+    input Clock, E, L;
+    output reg [n-1:0] Q;
 
----
-
-## ✅ **PART 1 FINAL STATUS**
-
-✔ Conceptually correct
-✔ Hardware-faithful
-✔ Textbook-aligned
-✔ Viva-safe
-✔ Ready for RTL mapping
+    always @(posedge Clock) begin
+        if (L)
+            Q <= {n{1'b1}};
+        else if (E)
+            Q <= Q - 1'b1;
+    end
+endmodule
+```
 
 ---
 
-### 🔜 **Next Step**
+# **PART 3: TESTBENCH (VERIFICATION ENGINEER STYLE)**
 
-When ready, say:
+---
 
-👉 **“Proceed to PART 2 – Divider RTL”**
+## **3.1 Testbench Objectives**
 
-and we will implement the **complete, synthesizable Verilog design** directly from this finalized architecture.
+The objectives of this testbench are:
+
+* To verify correct **functional behavior** of the sequential divider
+* To validate **FSM sequencing and control**
+* To confirm **quotient and remainder correctness**
+* To observe **cycle-by-cycle evolution** of internal operations via outputs
+* To ensure proper handling of:
+
+  * Reset
+  * Start signal
+  * Completion (`Done`)
+
+The testbench uses the **same example as explained in PART 1**.
+
+---
+
+## **3.2 Test Case Used (From PART 1 Example)**
+
+| Parameter          | Value                    |
+| ------------------ | ------------------------ |
+| Dividend (`A`)     | `10001100` (decimal 140) |
+| Divisor (`B`)      | `1001` (decimal 9)       |
+| Expected Quotient  | `00001111` (decimal 15)  |
+| Expected Remainder | `00000101` (decimal 5)   |
+
+This is the **exact textbook example** used in the FSM + datapath explanation.
+
+---
+
+## **3.3 Testbench Strategy**
+
+The testbench follows this sequence:
+
+1. Apply **active-low reset**
+2. Load dividend and divisor
+3. Assert start signal `s`
+4. Allow FSM to run for required cycles
+5. Wait for `Done`
+6. Observe final `Q` and `R`
+
+---
+
+## **3.4 Clock Generation**
+
+* A free-running clock is generated
+* Clock period is chosen to be **10 time units**
+* No dependency on simulator-specific features
+
+---
+
+## **3.5 Reset and Start Handling**
+
+* Reset is asserted at the beginning
+* Reset is de-asserted before starting the division
+* Start signal `s` is asserted **only once**
+* FSM handles the rest of the sequencing
+
+---
+
+## **3.6 Divider Testbench Code**
+
+```verilog
+//============================================================
+// Testbench for Sequential Divider
+//============================================================
+module tb_divider;
+
+    // Parameters
+    parameter n = 8;
+
+    // Testbench signals
+    reg              Clock;
+    reg              Resetn;
+    reg              s, LA, EB;
+    reg  [n-1:0]     DataA;
+    reg  [n-1:0]     DataB;
+    wire [n-1:0]     Q;
+    wire [n-1:0]     R;
+    wire             Done;
+
+    // Instantiate the Divider DUT
+    divider #(.n(n)) DUT (
+        .Clock (Clock),
+        .Resetn(Resetn),
+        .s     (s),
+        .LA     (LA),
+        .EB     (EB),
+        .DataA (DataA),
+        .DataB (DataB),
+        .Q     (Q),
+        .R     (R),
+        .Done  (Done)
+    );
+
+    //============================================================
+    // Clock Generation (10 time-unit period)
+    //============================================================
+    always #5 Clock = ~Clock;
+
+    //============================================================
+    // Test Sequence
+    //============================================================
+    initial begin
+        // Initialize signals
+        Clock  = 0;
+        Resetn = 0;
+        s      = 0;
+        LA     = 1;
+        EB     = 1;
+        DataA  = 0;
+        DataB  = 0;
+
+        // Apply reset
+        #10;
+        Resetn = 1;
+
+        // Load test operands (from PART 1 example)
+        // Dividend = 10001100 (140)
+        // Divisor  = 1001     (9)
+        DataA = 8'b10001100;
+        DataB = 8'b00001001;
+
+        // Assert start signal, disable input loading
+        #10;
+        s = 1;
+        LA = 0;
+        EB = 0;
+
+        // Deassert start after one cycle
+        #10;
+        s = 0;
+
+        // Wait until division completes
+        wait (Done == 1);
+
+        // Display final results
+        $display("====================================");
+        $display("Division Completed");
+        $display("Quotient  (Q) = %b", Q);
+        $display("Remainder (R) = %b", R);
+        $display("====================================");
+
+        // End simulation
+        #20;
+        $finish;
+    end
+
+endmodule
+```
+
+---
+
+## **3.7 Expected Simulation Outcome**
+
+At the end of simulation:
+
+* `Done = 1`
+* `Q = 00001111` (15)
+* `R = 00000101` (5)
+
+These results **exactly match** the example explained in **PART 1, Section 9**.
+
+---
+
+## **3.8 Verification Observations**
+
+* FSM transitions correctly from **S1 → S2 → S3**
+* Quotient bits appear **one cycle after generation**
+* Remainder updates only when `Cout = 1`
+* Counter controls iteration count accurately
+* Outputs remain stable after `Done` is asserted
+
+---
+
+# **PART 4: WAVEFORM & TIMING EXPLANATION**
+
+---
+
+<img width="1643" height="882" alt="image" src="https://github.com/user-attachments/assets/2034e44f-4bc8-4611-9f36-facf1e938d0a" />
+
+## **4.1 Overview of the Observed Simulation**
+
+The simulation corresponds to the division:
+
+* **Dividend (`DataA`) = 10001100 (140)**
+* **Divisor (`DataB`) = 00001001 (9)**
+
+Final observed results:
+
+* **Quotient (`Q`) = 00001111 (15)**
+* **Remainder (`R`) = 00000101 (5)**
+* **`Done` asserted after completion**
+
+The waveform validates correct **FSM sequencing**, **datapath operation**, and **quotient/remainder timing**.
+
+---
+
+<img width="1642" height="876" alt="image" src="https://github.com/user-attachments/assets/0d600f6e-5cbc-48e6-ba08-cbce1198da32" />
+
+## **4.2 Reset and Operand Loading Phase**
+
+### **Reset Phase**
+
+* `Resetn = 0`
+* FSM is forced into **State S1 (Initialization)**
+* Internal registers are cleared
+* Outputs `Q` and `R` are invalid (`X`)
+
+### **Operand Loading**
+
+* `LA = 1`, `EB = 1`
+* `DataA = 140`, `DataB = 9`
+* On the next rising edge of `Clock`:
+
+  * Register **A** loads the dividend
+  * Register **B** loads the divisor
+  * Register **R** and flip-flop **R0** are cleared
+
+At this point:
+
+* Register **A** holds the dividend
+* Register **B** holds the divisor
+* `R || R0 || A` is correctly initialized
+
+---
+
+## **4.3 Start Signal and FSM Transition**
+
+* `s` is asserted for one clock cycle
+* FSM transitions from **S1 → S2**
+* `LA` and `EB` are deasserted
+* Control is now fully FSM-driven
+
+This marks the **beginning of the iterative division process**.
+
+---
+
+## **4.4 Clock Cycle 0: Shift Preparation and Initial Evaluation**
+
+* A left shift of `R || R0 || A` is initiated
+* MSB of **A** shifts into **R0**
+* A subtraction is **already performed internally**:
+
+  * `R − B` is evaluated using 2’s complement addition
+  * Since `R = 0`, `R < B`
+  * **`Cout = 0`**
+* No remainder update occurs
+* This explains why in the next cycle the action is labeled:
+
+  * **Shift left, Q ← 0**
+
+This cycle prepares alignment and establishes the **initial quotient bit = 0**.
+
+---
+
+## **4.5 Iterative Division Cycles (Cycles 1 to 3)**
+
+For these cycles:
+
+* `R || R0 || A` is shifted left
+* Previous quotient bit (`Cout`) is inserted into LSB of **A**
+* Subtraction is performed every cycle
+* Observed behavior:
+
+  * `R < B`
+  * `Cout = 0`
+  * `LR = 0` → remainder not updated
+  * Quotient bits inserted are `0`
+
+This matches the waveform where:
+
+* `Q` evolves by left shifts with `0`s entering LSB
+* `R` grows gradually but remains less than `B`
+
+---
+
+## **4.6 Critical Cycle: R Becomes Greater Than or Equal to B**
+
+At the **fourth effective iteration**:
+
+* After shifting, `R || R0` becomes **greater than or equal to `B`**
+* Subtraction result is **positive**
+* **`Cout = 1` is generated**
+* FSM asserts:
+
+  * `LR = 1` → subtraction result loaded into **R**
+* **Important timing point**:
+
+  * This quotient bit (`1`) is **generated now**
+  * It is **inserted into A in the next clock cycle**
+
+This explains why:
+
+* The waveform shows the **quotient bit appearing one cycle later**
+
+---
+
+## **4.7 Subsequent Iterations (Cycles 5 to 8)**
+
+For the remaining cycles:
+
+* Each cycle:
+
+  * Shift `R || R0 || A`
+  * Insert previous `Cout` into LSB of **A**
+  * Perform subtraction
+* Observed:
+
+  * `R ≥ B`
+  * `Cout = 1`
+  * `LR = 1` → remainder updated
+  * Quotient bits inserted are `1`
+
+This results in:
+
+* `Q` converging to `00001111`
+* `R` converging to `00000101`
+
+---
+
+## **4.8 Counter, Zero Flag, and Completion**
+
+* The down-counter decrements after each iteration
+* When `Count == 0`:
+
+  * `z = 1`
+  * FSM transitions **S2 → S3**
+* In **State S3**:
+
+  * `Done = 1`
+  * `Q` and `R` are stable and valid
+
+This matches the waveform where:
+
+* `Done` asserts only after final quotient and remainder are ready
+
+---
+
+## **4.9 Key Timing Insights**
+
+* **Subtraction is performed every cycle**, regardless of outcome
+* `Cout` simultaneously:
+
+  * Indicates `R ≥ B` or `R < B`
+  * Generates the quotient bit
+* **Quotient generation and insertion are separated by one cycle**
+* `R` is conditionally updated using `LR`
+* FSM ensures **exactly `n` iterations**
+
+---
+
+## **4.10 Final Verification Summary**
+
+| Signal         | Observed Result | Expected  |
+| -------------- | --------------- | --------- |
+| `Q`            | `00001111`      | ✔ Correct |
+| `R`            | `00000101`      | ✔ Correct |
+| `Done`         | Asserted        | ✔ Correct |
+| FSM sequencing | S1 → S2 → S3    | ✔ Correct |
+
+<img width="1640" height="876" alt="image" src="https://github.com/user-attachments/assets/41aed57c-19c8-4c77-b37f-b5c600e99f59" />
+
+---
+
+# **PART 5: VIVA, INTERVIEW, DEBUG & DESIGN INSIGHTS**
+
+---
+
+## **A) Viva Questions (University / Lab-Oriented)**
+
+1. Why is division inherently a **sequential operation**, unlike addition?
+2. What is the role of the **FSM** in your divider design?
+3. Why is subtraction performed **in every iteration**, even when `R < B`?
+4. What is the significance of the signal `Cout` in this design?
+5. Why is the quotient bit **generated in one cycle and inserted in the next cycle**?
+6. Explain the purpose of splitting the remainder into **R and R0**.
+7. Why is register **A used both as dividend and quotient**?
+8. How does the FSM ensure that the division runs for **exactly `n` iterations**?
+9. What happens if the start signal `s` is held high continuously?
+10. Why are `LA` and `EB` controlled externally in your implementation?
+11. What ensures that the outputs `Q` and `R` are valid only when `Done = 1`?
+12. How does your design relate to the **binary long-division method**?
+
+---
+
+## **B) Interview-Style Questions (VLSI / Industry)**
+
+1. How would you modify this divider to support **signed division**?
+2. What are the area and timing trade-offs between:
+
+   * Restoring division
+   * Non-restoring division
+3. How would you **pipeline** this divider to improve throughput?
+4. Why is a **down-counter** preferred over comparing iteration count manually?
+5. How would you parameterize this design for different bit-widths?
+6. What would happen if `Cout` were sampled combinationally instead of synchronously?
+7. How would this divider behave if integrated into a **CPU datapath**?
+8. How do you ensure this design is **synthesis-safe**?
+9. What verification strategy would you use for corner cases like:
+
+   * Dividend < divisor
+   * Dividend = 0
+10. How would you formally verify correctness of this divider?
+
+---
+
+## **C) Debug Scenarios (Real RTL Issues)**
+
+### **Bug 1: Blocking Assignment in FSM Register**
+
+```verilog
+always @(posedge Clock)
+    y = Y;   // Wrong
+```
+
+**Problem:**
+
+* Race conditions
+* Simulation vs synthesis mismatch
+* Unstable FSM behavior
+
+**Fix:**
+
+```verilog
+always @(posedge Clock)
+    y <= Y;
+```
+
+---
+
+### **Bug 2: Quotient Bit Appears One Cycle Late**
+
+**Observation:**
+
+* Designer expects quotient to update immediately
+
+**Reason:**
+
+* Quotient is **generated from `Cout`**
+* Inserted only during the **next shift**
+
+**Conclusion:**
+
+* This is **correct behavior**, not a bug
+
+---
+
+### **Bug 3: Remainder Always Updates**
+
+**Cause:**
+
+* `LR` asserted unconditionally
+
+**Fix:**
+
+* Assert `LR` **only when `Cout = 1`**
+
+---
+
+### **Bug 4: Division Never Completes**
+
+**Cause:**
+
+* Counter not decremented after `z` evaluation
+
+**Fix:**
+
+* Decrement counter **only after checking `z`**
+
+---
+
+## **D) Design Variations**
+
+1. **Parallel Divider**
+
+   * Faster but area-intensive
+2. **Non-Restoring Divider**
+
+   * Reduced cycles, more complex control
+3. **Signed Divider**
+
+   * Requires sign preprocessing and postprocessing
+4. **Handshake-Based Divider**
+
+   * Start/Done replaced by valid/ready
+5. **Parameterized Divider**
+
+   * Supports arbitrary bit-widths
+
+---
+
+## **E) Conceptual Reasoning Questions**
+
+1. Why is separating **datapath and control path** important?
+2. What advantages does an FSM provide over ad-hoc control logic?
+3. How does this design improve clarity compared to a monolithic RTL block?
+4. Why is the quotient accumulated MSB-to-LSB?
+5. What would break if subtraction were not performed every cycle?
+
+---
+
+## **F) If This Were in a Real Chip…**
+
+### **Power**
+
+* Clock gating on:
+
+  * Registers
+  * Counter
+* Disable logic after `Done`
+
+### **Clocking**
+
+* Single-clock domain
+* Clean synchronous control
+
+### **CDC**
+
+* Required if `s` comes from another clock domain
+
+### **Verification Strategy**
+
+* Directed tests
+* Random constrained tests
+* Assertion: `Done → outputs stable`
+* Coverage on:
+
+  * `Cout`
+  * FSM transitions
+  * Counter reaching zero
+
+---
+
+# **Part-6: Schematics:
+
+---
+
+## **RTL Schematic**
+---
+<img width="1644" height="879" alt="image" src="https://github.com/user-attachments/assets/be223fc0-28af-49e0-8d1a-c3a2cb296f3e" />
+
+## **Technology Schematic**
+---
+<img width="1641" height="879" alt="image" src="https://github.com/user-attachments/assets/c758b4b4-0212-49bf-bf93-1aada0c5471e" />
+<img width="1641" height="882" alt="image" src="https://github.com/user-attachments/assets/61b640a1-f24d-4853-8ad3-e4cf3138e807" />
+
