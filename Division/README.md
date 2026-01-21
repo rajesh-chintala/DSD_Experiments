@@ -275,7 +275,7 @@ The control logic is implemented as an **Algorithmic State Machine (ASM)**, as s
 
 ---
 
-## **7.1 Control Signals and Their Functions (Complete and Corrected)**
+## **7.1 Control Signals and Their Functions**
 
 | Signal | Description                                        |
 | ------ | -------------------------------------------------- |
@@ -354,6 +354,8 @@ The control path ensures that:
 # **9. FSM / ASM State Description**
 
 The FSM consists of **three main states**, with one **explicit shift-preparation step**, exactly as shown in the ASM diagram.
+
+<img width="627" height="575" alt="image" src="https://github.com/user-attachments/assets/9fdfe072-614a-4752-9989-9c7819a3434a" />
 
 ---
 
@@ -692,19 +694,10 @@ In **clock cycle 8**:
 
 The flip-flop **rr0** is not part of the final result.
 
----
-
-## **Key Timing Takeaways (Locked Understanding)**
-
-* Subtraction is evaluated **in every cycle**
-* `Cout` is generated **in the same cycle as subtraction**
-* Quotient bit is **generated in one cycle**
-* Quotient bit is **inserted into A during the next shift**
-* The table notation **“Shift left, Q ← x”** always refers to the **previous cycle’s `Cout`**
 
 ---
 
-# **PART 2: SYNTHESIZABLE VERILOG RTL (WITH SUBMODULES)**
+# **PART 2: SYNTHESIZABLE VERILOG RTL**
 
 ---
 
@@ -831,7 +824,7 @@ endmodule
 
 ---
 
-## **SUBMODULES (TEXTBOOK-STYLE)**
+## **SUBMODULES **
 
 ---
 
@@ -912,7 +905,7 @@ endmodule
 
 ---
 
-# **PART 3: TESTBENCH (VERIFICATION ENGINEER STYLE)**
+# **PART 3: TESTBENCH**
 
 ---
 
@@ -1451,7 +1444,7 @@ always @(posedge Clock)
 
 ---
 
-# **Part-6: Schematics:
+# **Part-6: Schematics:**
 
 ---
 
@@ -1463,4 +1456,116 @@ always @(posedge Clock)
 ---
 <img width="1641" height="879" alt="image" src="https://github.com/user-attachments/assets/c758b4b4-0212-49bf-bf93-1aada0c5471e" />
 <img width="1641" height="882" alt="image" src="https://github.com/user-attachments/assets/61b640a1-f24d-4853-8ad3-e4cf3138e807" />
+<img width="1640" height="882" alt="image" src="https://github.com/user-attachments/assets/844267a9-76c0-492e-a406-3dad30ccd07c" />
 
+---
+
+# ** Part-7: Constraints:**
+---
+```
+create_clock -period 10 -name Clock [get_ports Clock]
+
+set_property PACKAGE_PIN E3 [get_ports Clock]
+set_property IOSTANDARD LVCMOS33 [get_ports Clock]
+
+set_property PACKAGE_PIN V10 [get_ports {DataA[7]}]
+set_property PACKAGE_PIN U11 [get_ports {DataA[6]}]
+set_property PACKAGE_PIN U12 [get_ports {DataA[5]}]
+set_property PACKAGE_PIN H6 [get_ports {DataA[4]}]
+set_property PACKAGE_PIN T13 [get_ports {DataA[3]}]
+
+set_property PACKAGE_PIN R16 [get_ports {DataA[2]}]
+set_property PACKAGE_PIN U8 [get_ports {DataA[1]}]
+set_property PACKAGE_PIN T8 [get_ports {DataA[0]}]
+set_property PACKAGE_PIN R13 [get_ports {DataB[7]}]
+set_property PACKAGE_PIN U18 [get_ports {DataB[6]}]
+set_property PACKAGE_PIN T18 [get_ports {DataB[5]}]
+set_property PACKAGE_PIN R17 [get_ports {DataB[4]}]
+set_property PACKAGE_PIN R15 [get_ports {DataB[3]}]
+set_property PACKAGE_PIN M13 [get_ports {DataB[2]}]
+set_property PACKAGE_PIN L16 [get_ports {DataB[1]}]
+set_property PACKAGE_PIN J15 [get_ports {DataB[0]}]
+set_property PACKAGE_PIN V11 [get_ports {Q[7]}]
+set_property PACKAGE_PIN V12 [get_ports {Q[6]}]
+set_property PACKAGE_PIN V14 [get_ports {Q[5]}]
+set_property PACKAGE_PIN V15 [get_ports {Q[4]}]
+set_property PACKAGE_PIN T16 [get_ports {Q[3]}]
+set_property PACKAGE_PIN U14 [get_ports {Q[2]}]
+set_property PACKAGE_PIN T15 [get_ports {Q[1]}]
+set_property PACKAGE_PIN V16 [get_ports {Q[0]}]
+set_property PACKAGE_PIN U16 [get_ports {R[7]}]
+set_property PACKAGE_PIN U17 [get_ports {R[6]}]
+set_property PACKAGE_PIN V17 [get_ports {R[5]}]
+set_property PACKAGE_PIN R18 [get_ports {R[4]}]
+set_property PACKAGE_PIN N14 [get_ports {R[3]}]
+set_property PACKAGE_PIN J13 [get_ports {R[2]}]
+set_property PACKAGE_PIN K15 [get_ports {R[1]}]
+set_property PACKAGE_PIN H17 [get_ports {R[0]}]
+set_property PACKAGE_PIN P17 [get_ports EB]
+set_property PACKAGE_PIN M17 [get_ports LA]
+set_property PACKAGE_PIN M18 [get_ports Resetn]
+set_property PACKAGE_PIN P18 [get_ports s]
+set_property PACKAGE_PIN N16 [get_ports Done]
+set_property IOSTANDARD LVCMOS33 [get_ports Done]
+set_property IOSTANDARD LVCMOS33 [get_ports EB]
+set_property IOSTANDARD LVCMOS33 [get_ports LA]
+set_property IOSTANDARD LVCMOS33 [get_ports Resetn]
+set_property IOSTANDARD LVCMOS33 [get_ports s]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataA[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataA[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataA[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataA[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataA[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataA[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataA[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataA[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataB[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataB[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataB[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataB[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataB[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataB[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Q[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Q[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Q[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Q[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataB[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {DataB[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Q[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Q[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Q[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {R[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {R[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {R[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {R[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {R[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {R[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {R[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {R[0]}]
+set_property DRIVE 12 [get_ports {Q[3]}]
+set_property DRIVE 12 [get_ports {Q[2]}]
+set_property DRIVE 12 [get_ports {Q[1]}]
+set_property DRIVE 12 [get_ports {Q[0]}]
+set_property DRIVE 12 [get_ports {R[7]}]
+set_property DRIVE 12 [get_ports {R[6]}]
+set_property DRIVE 12 [get_ports {R[5]}]
+set_property DRIVE 12 [get_ports {R[4]}]
+set_property DRIVE 12 [get_ports {R[3]}]
+set_property DRIVE 12 [get_ports {R[2]}]
+set_property DRIVE 12 [get_ports {R[1]}]
+set_property DRIVE 12 [get_ports {R[0]}]
+set_property SLEW SLOW [get_ports {Q[3]}]
+set_property SLEW SLOW [get_ports {Q[2]}]
+set_property SLEW SLOW [get_ports {Q[1]}]
+set_property SLEW SLOW [get_ports {Q[0]}]
+set_property SLEW SLOW [get_ports {R[7]}]
+set_property SLEW SLOW [get_ports {R[6]}]
+set_property SLEW SLOW [get_ports {R[5]}]
+set_property SLEW SLOW [get_ports {R[4]}]
+set_property SLEW SLOW [get_ports {R[3]}]
+set_property SLEW SLOW [get_ports {R[2]}]
+set_property SLEW SLOW [get_ports {R[1]}]
+set_property SLEW SLOW [get_ports {R[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Q[3]}]
+
+```
