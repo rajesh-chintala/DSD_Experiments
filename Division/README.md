@@ -1569,3 +1569,11 @@ set_property SLEW SLOW [get_ports {R[0]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {Q[3]}]
 
 ```
+---
+
+# Final Project Summary
+<img width="1641" height="853" alt="image" src="https://github.com/user-attachments/assets/70800999-4623-4749-9041-9694f36f5163" />
+<img width="1642" height="849" alt="image" src="https://github.com/user-attachments/assets/58bd68b0-cf74-4362-8e94-e6dc583bd7cd" />
+<img width="824" height="163" alt="image" src="https://github.com/user-attachments/assets/04613158-f27d-4e73-9c18-84a960e195c2" />
+
+
