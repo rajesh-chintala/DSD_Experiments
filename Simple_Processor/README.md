@@ -1168,6 +1168,91 @@ endmodule
 ```
 
 ---
+## **3.6 Applied Inputs and Expected Outputs**
+
+This section summarizes the **instruction sequence applied in the testbench** and the **expected behavior** of the processor for each case.
+
+---
+
+### **Instruction 1: Load**
+
+**Applied Inputs**
+
+* `F = 00` (Load)
+* `Rx = 00` (R0)
+* `Data = 0x0A`
+* `w = 1`
+
+**Expected Outputs / Behavior**
+
+* External data drives `BusWires`
+* Register `R0` loads `0x0A`
+* `Done` asserted after one clock cycle
+
+---
+
+### **Instruction 2: Move**
+
+**Applied Inputs**
+
+* `F = 01` (Move)
+* `Rx = 01` (R1)
+* `Ry = 00` (R0)
+* `w = 1`
+
+**Expected Outputs / Behavior**
+
+* Register `R0` drives `BusWires`
+* Register `R1` captures the value `0x0A`
+* `Done` asserted after one clock cycle
+
+---
+
+### **Instruction 3: Add**
+
+**Applied Inputs**
+
+* `F = 10` (Add)
+* `Rx = 01` (R1)
+* `Ry = 00` (R0)
+* `w = 1`
+
+**Expected Outputs / Behavior**
+
+* Multi-cycle execution
+* ALU computes `R1 + R0`
+* Result written back to `R1`
+* `Done` asserted after three clock cycles
+
+---
+
+### **Instruction 4: Sub**
+
+**Applied Inputs**
+
+* `F = 11` (Sub)
+* `Rx = 01` (R1)
+* `Ry = 00` (R0)
+* `w = 1`
+
+**Expected Outputs / Behavior**
+
+* Multi-cycle execution
+* ALU computes `R1 - R0`
+* Result written back to `R1`
+* `Done` asserted after three clock cycles
+
+---
+
+### **Overall Expected Outcomes**
+
+* Instructions execute sequentially without overlap
+* Single-cycle instructions: Load, Move
+* Multi-cycle instructions: Add, Sub
+* `Done` correctly marks instruction completion
+* Data flow on `BusWires` matches control sequencing
+
+---
 
 ## **3.6 Observability During Simulation**
 
