@@ -62,6 +62,11 @@ The **datapath** is the part of the processor that actually handles data. It doe
 
 ---
 
+<img width="517" height="841" alt="image" src="https://github.com/user-attachments/assets/54325213-2ec5-42b8-b2ea-d02e25675b3f" />
+
+<img width="767" height="483" alt="datapath2" src="https://github.com/user-attachments/assets/cc0e5a66-50ad-4e8c-9196-2993a0e163d8" />
+
+
 ## **4.1 Datapath Overview**
 
 The datapath consists of the following components:
@@ -97,6 +102,8 @@ Only **one `Rout` signal is allowed to be active at a time**, ensuring controlle
 ---
 
 ## **4.3 Tri-State Buffer (Datapath Component)**
+
+<img width="571" height="203" alt="image" src="https://github.com/user-attachments/assets/0e601e53-e5f6-490c-afb7-4e33631f1658" />
 
 A **tri-state buffer** is a special circuit that can place its output in one of three states:
 
@@ -250,6 +257,8 @@ The control path generates the following control signals to coordinate datapath 
 
 ## **5.2 Function Register (FR)**
 
+<img width="488" height="378" alt="image" src="https://github.com/user-attachments/assets/c9468c41-f303-4bb7-8ebf-db73317bc15a" />
+
 The **Function Register (FR)** stores the instruction information required by the control path during execution.
 
 ### **Purpose of the Function Register**
@@ -329,6 +338,8 @@ This determines **which register drives the shared bus**.
 
 Instruction execution is divided into **time steps**, with each step occupying one clock cycle.
 
+<img width="296" height="259" alt="image" src="https://github.com/user-attachments/assets/494fa789-b47d-4446-bab1-13b1f3e7c1a1" />
+
 ### **Time-Step Signals**
 
 | Signal | Meaning               |
@@ -354,6 +365,8 @@ The time steps are generated using:
 ## **5.6 Control Signal Assertion Summary (Operation vs Time Step)**
 
 This section explains **which control signals are asserted at each time step**, instruction-wise, based on the control behavior summarized in the given figure.
+
+<img width="440" height="184" alt="image" src="https://github.com/user-attachments/assets/0efb9523-b67b-4e1f-baac-a11f210daaf1" />
 
 ---
 
@@ -1479,6 +1492,268 @@ Each instruction progresses deterministically through the expected time steps.
 * Bus conflicts are avoided
 * ALU operations are correctly sequenced
 * Reset ensures clean instruction boundaries
+---
+
+# **PART 5: VIVA, INTERVIEW, DEBUG & DESIGN INSIGHTS**
 
 ---
 
+## **5.1 Viva Questions (University / Lab-Oriented)**
+
+1. What is the role of the shared bus in this processor?
+2. Why is the processor designed as a multi-cycle architecture?
+3. What is the purpose of the signal `w`?
+4. How does the processor know when an instruction has completed?
+5. Why are Load and Move instructions completed in one cycle, while Add and Sub require multiple cycles?
+6. What is the function of the operand register `A`?
+7. Why is a separate result register `G` used?
+8. What happens during time step `T0`?
+9. Why is the time-step counter cleared using `Reset | Done | (~w & T0)`?
+10. How does the processor avoid bus contention?
+
+---
+
+## **5.2 Interview-Style Questions (VLSI / Industry)**
+
+1. Why is a tri-state bus suitable for small processors but not for large SoCs?
+2. What are the disadvantages of a shared bus architecture?
+3. How would you modify this processor to support pipelining?
+4. What timing issues can arise with tri-state buffers?
+5. How does this design ensure deterministic instruction execution?
+6. What changes are required to add a new instruction?
+7. How would you verify this processor using constrained random testing?
+8. Why is the ALU combinational while registers are sequential?
+9. What would happen if `w` is asserted for more than one cycle?
+10. How does this design scale with word size?
+
+---
+
+## **5.3 Debug Scenarios**
+
+### **Bug 1: Instruction Does Not Complete**
+
+**Symptom**
+
+* `Done` never asserts
+
+**Possible Cause**
+
+* Incorrect time-step decoding
+* `Done` logic missing `T3` for Add/Sub
+
+**Fix**
+
+* Verify `Done = (I0 | I1)·T1 + (I2 | I3)·T3`
+
+---
+
+### **Bug 2: Bus Contention**
+
+**Symptom**
+
+* `BusWires` shows `X` or undefined values
+
+**Possible Cause**
+
+* Multiple `Rout` signals asserted simultaneously
+
+**Fix**
+
+* Ensure only one source drives the bus per time step
+* Verify register output enable logic
+
+---
+
+### **Bug 3: Wrong ALU Result**
+
+**Symptom**
+
+* Incorrect values in register `G`
+
+**Possible Cause**
+
+* Incorrect `AddSub` control
+* Operand registers not loaded correctly
+
+**Fix**
+
+* Check `AddSub = I3`
+* Verify `Ain` and `Gin` timing
+
+---
+
+### **Bug 4: Instruction Starts Incorrectly**
+
+**Symptom**
+
+* Wrong instruction executed
+
+**Possible Cause**
+
+* Function register not loaded correctly
+
+**Fix**
+
+* Verify `FRin = w & T0`
+* Ensure `w` is asserted only at instruction start
+
+---
+
+## **5.4 Design Variations**
+
+1. **Single-Cycle Processor**
+
+   * Faster execution
+   * Increased hardware cost
+
+2. **Pipelined Processor**
+
+   * Higher throughput
+   * Requires hazard handling
+
+3. **Bus-Based vs Mux-Based Datapath**
+
+   * Bus: simpler, area-efficient
+   * Mux: scalable, synthesis-friendly
+
+4. **Microprogrammed Control**
+
+   * Flexible instruction control
+   * Requires control memory
+
+5. **Register File Instead of Individual Registers**
+
+   * Better scalability
+   * More complex decoding
+
+---
+
+## **5.5 Conceptual Questions**
+
+1. Why is FSM behavior implicit in this processor?
+2. How do time steps replace explicit FSM states?
+3. Why is control logic purely combinational?
+4. What is the trade-off between control complexity and datapath simplicity?
+5. Why is instruction execution deterministic?
+
+---
+
+## **5.6 If This Were in a Real Chip…**
+
+### **Power**
+
+* Clock gating would be required
+* Bus activity would be minimized
+
+### **Clocking**
+
+* Synchronous single-clock design
+* Timing closure easier than pipelined designs
+
+### **Verification**
+
+* Directed tests for instruction correctness
+* Assertion-based verification for bus contention
+* Functional coverage for instruction combinations
+
+### **Scalability**
+
+* Tri-state buses replaced by multiplexers
+* Control logic structured as FSM or microcode
+
+---
+
+## **5.7 Summary**
+
+* The processor demonstrates clear separation of datapath and control path
+* Multi-cycle execution reduces hardware cost
+* Shared bus simplifies datapath design
+* Control logic ensures correct sequencing and completion
+* The design is educational, deterministic, and synthesizable
+
+---
+
+
+# **Part-6: Constraints**
+
+---
+
+```verilog
+create_clock -period 10 -name Clock [get_ports Clock]
+
+set_property PACKAGE_PIN E3 [get_ports Clock]
+set_property IOSTANDARD LVCMOS33 [get_ports Clock]
+set_property PACKAGE_PIN H17 [get_ports Done]
+set_property PACKAGE_PIN J15 [get_ports Reset]
+set_property PACKAGE_PIN L16 [get_ports w]
+set_property PACKAGE_PIN V11 [get_ports {BusWires[7]}]
+set_property PACKAGE_PIN V12 [get_ports {BusWires[6]}]
+set_property PACKAGE_PIN V15 [get_ports {BusWires[4]}]
+set_property PACKAGE_PIN T16 [get_ports {BusWires[3]}]
+set_property PACKAGE_PIN V14 [get_ports {BusWires[5]}]
+set_property PACKAGE_PIN U14 [get_ports {BusWires[2]}]
+set_property PACKAGE_PIN T15 [get_ports {BusWires[1]}]
+set_property PACKAGE_PIN V16 [get_ports {BusWires[0]}]
+set_property PACKAGE_PIN V10 [get_ports {Data[7]}]
+set_property PACKAGE_PIN U11 [get_ports {Data[6]}]
+set_property PACKAGE_PIN H6 [get_ports {Data[4]}]
+set_property PACKAGE_PIN T13 [get_ports {Data[3]}]
+set_property PACKAGE_PIN R16 [get_ports {Data[2]}]
+set_property PACKAGE_PIN U8 [get_ports {Data[1]}]
+set_property PACKAGE_PIN T8 [get_ports {Data[0]}]
+set_property PACKAGE_PIN R13 [get_ports {F[1]}]
+set_property PACKAGE_PIN U18 [get_ports {F[0]}]
+set_property PACKAGE_PIN T18 [get_ports {Rx[1]}]
+set_property PACKAGE_PIN R17 [get_ports {Rx[0]}]
+set_property PACKAGE_PIN R15 [get_ports {Ry[1]}]
+set_property PACKAGE_PIN M13 [get_ports {Ry[0]}]
+set_property PACKAGE_PIN U12 [get_ports {Data[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports Done]
+set_property IOSTANDARD LVCMOS33 [get_ports Reset]
+set_property IOSTANDARD LVCMOS33 [get_ports w]
+set_property IOSTANDARD LVCMOS33 [get_ports {BusWires[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {BusWires[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {BusWires[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {BusWires[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {BusWires[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {BusWires[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {BusWires[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {BusWires[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Data[7]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Data[6]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Data[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Data[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Data[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Data[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Data[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Data[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {F[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {F[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Rx[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Rx[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Ry[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {Ry[0]}]
+```
+
+---
+
+# **Part-7: Schematics**
+
+---
+
+## **RTL Schematic**
+
+<img width="1915" height="1041" alt="image" src="https://github.com/user-attachments/assets/13ae2d20-6b1f-445c-9994-f42141caa9bb" />
+
+<img width="1920" height="1042" alt="image" src="https://github.com/user-attachments/assets/aa3fef40-e08d-4d39-86da-3c5901bb5ee7" />
+---
+
+## **Technology Schematic**
+
+<img width="1917" height="1039" alt="image" src="https://github.com/user-attachments/assets/833aafae-299c-4ec2-8413-470ea10f834f" />
+
+---
+
+# **Part-8: Final Project Summary**
+
+---
