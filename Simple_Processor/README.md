@@ -1007,32 +1007,40 @@ endmodule
 
 ## **3.1 Purpose of the Testbench**
 
-The purpose of this testbench is to verify the correct functional operation of the simple processor by applying representative instructions and observing the resulting behavior over multiple clock cycles.
+The purpose of this testbench is to verify the correct functional operation of the simple processor by applying a sequence of instructions and observing their execution behavior over time.
+The testbench ensures that instruction decoding, control sequencing, and datapath operations work together correctly.
 
 ---
 
 ## **3.2 Objectives**
 
-The testbench aims to:
+The objectives of this testbench are:
 
-* Verify correct execution of Load, Move, Add, and Sub instructions
-* Confirm correct sequencing of multi-cycle instructions
-* Validate shared bus operation
-* Ensure correct assertion of the `Done` signal
-* Verify reset and instruction start (`w`) handling
+* To verify correct execution of all supported instructions:
+
+  * Load
+  * Move
+  * Add
+  * Sub
+* To validate instruction sequencing using the control signal `w`
+* To confirm correct assertion of the `Done` signal
+* To verify proper shared-bus operation
+* To ensure correct processor behavior after reset
 
 ---
 
 ## **3.3 Verification Strategy**
 
-A **directed testing approach** is used:
+A **directed, step-by-step verification strategy** is used:
 
-* Instructions are applied one at a time
-* Inputs are held stable until instruction completion
-* The next instruction is issued only after `Done` is asserted
-* Verification is performed using waveform inspection
+* Each instruction is applied independently
+* The processor is reset before each instruction
+* The instruction start signal (`w`) is asserted for one clock pulse
+* Inputs remain stable during instruction execution
+* Instruction completion is observed via `Done`
+* Waveform inspection is used for validation
 
-This strategy provides deterministic and transparent verification.
+This strategy simplifies debugging and clearly isolates instruction behavior.
 
 ---
 
@@ -1040,140 +1048,114 @@ This strategy provides deterministic and transparent verification.
 
 Each instruction is applied using the following sequence:
 
-1. Apply opcode (`F`) and register selectors (`Rx`, `Ry`)
-2. Assert `w = 1` to start execution
-3. Hold all instruction inputs constant
-4. Wait for `Done = 1`
+1. Assert `Reset` to initialize the processor
+2. Apply instruction opcode (`F`) and register selectors (`Rx`, `Ry`)
+3. Deassert `Reset`
+4. Assert `w` for one clock cycle to start execution
 5. Deassert `w`
-6. Proceed to the next instruction
+6. Allow sufficient time for instruction completion
 
-This ensures that **instructions do not overlap** and the control path completes one instruction before starting the next.
+Resetting before each instruction ensures **clean and independent verification**.
 
 ---
 
 ## **3.5 Complete Testbench Code**
 
 ```verilog
-module tb_proc;
+module tb_proc();
 
     //--------------------------------------------------
-    // Signal Declarations
+    // Testbench Signal Declarations
     //--------------------------------------------------
     reg  [7:0] Data;
-    reg        Reset;
-    reg        w;
-    reg        Clock;
-    reg  [1:0] F;
-    reg  [1:0] Rx, Ry;
-
+    reg        Reset, w, Clock;
+    reg  [1:0] F, Rx, Ry;
     wire [7:0] BusWires;
     wire       Done;
 
     //--------------------------------------------------
     // DUT Instantiation
     //--------------------------------------------------
-    proc DUT (
-        .Data     (Data),
-        .Reset    (Reset),
-        .w        (w),
-        .Clock    (Clock),
-        .F        (F),
-        .Rx       (Rx),
-        .Ry       (Ry),
-        .Done     (Done),
-        .BusWires (BusWires)
+    proc dut (
+        Data, Reset, w, Clock, F, Rx, Ry, Done, BusWires
     );
 
     //--------------------------------------------------
     // Clock Generation (10 time-unit period)
     //--------------------------------------------------
-    always #5 Clock = ~Clock;
+    initial begin
+        Clock = 1'b0;
+        forever #5 Clock = ~Clock;
+    end
 
     //--------------------------------------------------
     // Test Sequence
     //--------------------------------------------------
     initial begin
 
-        // ---------------------------------------------
-        // Initialization and Reset
-        // ---------------------------------------------
-        Clock = 0;
+        //--------------------------------------------------
+        // Test Case 1: Load Instruction
+        // Load Data = 10 into R0
+        //--------------------------------------------------
         Reset = 1;
         w     = 0;
-        Data  = 0;
-        F     = 0;
-        Rx    = 0;
-        Ry    = 0;
+        F     = 2'b00;     // Load
+        Data  = 8'd10;
+        Rx    = 2'b00;     // R0
+        Ry    = 2'b00;
 
-        #10;
-        Reset = 0;
+        #10 Reset = 0;
+        #10 w = 1;
+        #10 w = 0;
 
-        // ---------------------------------------------
-        // Test Case 1: Load Instruction
-        // Load Data into R0
-        // ---------------------------------------------
-        #10;
-        Data = 8'h0A;
-        F    = 2'b00;   // Load
-        Rx   = 2'b00;   // R0
-        w    = 1;
-
-        wait (Done);
-        w = 0;
-
-        // ---------------------------------------------
+        //--------------------------------------------------
         // Test Case 2: Move Instruction
         // Move R0 to R1
-        // ---------------------------------------------
-        #10;
-        F  = 2'b01;     // Move
-        Rx = 2'b01;     // R1
-        Ry = 2'b00;     // R0
-        w  = 1;
+        //--------------------------------------------------
+        #10 Reset = 1;
+        F  = 2'b01;        // Move
+        Ry = 2'b00;        // R0
+        Rx = 2'b01;        // R1
 
-        wait (Done);
-        w = 0;
+        #10 Reset = 0;
+        #10 w = 1;
+        #10 w = 0;
 
-        // ---------------------------------------------
+        //--------------------------------------------------
         // Test Case 3: Add Instruction
         // R1 = R1 + R0
-        // ---------------------------------------------
-        #10;
-        F  = 2'b10;     // Add
-        Rx = 2'b01;     // R1
-        Ry = 2'b00;     // R0
-        w  = 1;
+        //--------------------------------------------------
+        #10 Reset = 1;
+        F  = 2'b10;        // Add
 
-        wait (Done);
-        w = 0;
+        #10 Reset = 0;
+        #10 w = 1;
+        #10 w = 0;
 
-        // ---------------------------------------------
+        //--------------------------------------------------
         // Test Case 4: Sub Instruction
         // R1 = R1 - R0
-        // ---------------------------------------------
-        #10;
-        F  = 2'b11;     // Sub
-        Rx = 2'b01;     // R1
-        Ry = 2'b00;     // R0
-        w  = 1;
+        //--------------------------------------------------
+        #40 Reset = 1;
+        F  = 2'b11;        // Sub
 
-        wait (Done);
-        w = 0;
+        #10 Reset = 0;
+        #10 w = 1;
+        #10 w = 0;
 
-        // ---------------------------------------------
+        //--------------------------------------------------
         // End Simulation
-        // ---------------------------------------------
-        #50;
-        $stop;
+        //--------------------------------------------------
+        #100;
+        $finish;
     end
 
 endmodule
 ```
 
 ---
-## **3.6 Applied Inputs and Expected Outputs**
 
-This section summarizes the **instruction sequence applied in the testbench** and the **expected behavior** of the processor for each case.
+## **3.6 Applied Inputs and Expected Outputs**
 
 ---
 
@@ -1181,16 +1163,16 @@ This section summarizes the **instruction sequence applied in the testbench** an
 
 **Applied Inputs**
 
-* `F = 00` (Load)
-* `Rx = 00` (R0)
-* `Data = 0x0A`
+* `F = 00`
+* `Rx = 00`
+* `Data = 10`
 * `w = 1`
 
-**Expected Outputs / Behavior**
+**Expected Behavior**
 
 * External data drives `BusWires`
-* Register `R0` loads `0x0A`
-* `Done` asserted after one clock cycle
+* Register `R0` loads value `10`
+* Instruction completes in one cycle
 
 ---
 
@@ -1198,16 +1180,16 @@ This section summarizes the **instruction sequence applied in the testbench** an
 
 **Applied Inputs**
 
-* `F = 01` (Move)
-* `Rx = 01` (R1)
-* `Ry = 00` (R0)
+* `F = 01`
+* `Ry = 00`
+* `Rx = 01`
 * `w = 1`
 
-**Expected Outputs / Behavior**
+**Expected Behavior**
 
-* Register `R0` drives `BusWires`
-* Register `R1` captures the value `0x0A`
-* `Done` asserted after one clock cycle
+* `R0` drives the bus
+* `R1` captures value `10`
+* Instruction completes in one cycle
 
 ---
 
@@ -1215,17 +1197,16 @@ This section summarizes the **instruction sequence applied in the testbench** an
 
 **Applied Inputs**
 
-* `F = 10` (Add)
-* `Rx = 01` (R1)
-* `Ry = 00` (R0)
+* `F = 10`
+* `Rx = 01`
+* `Ry = 00`
 * `w = 1`
 
-**Expected Outputs / Behavior**
+**Expected Behavior**
 
-* Multi-cycle execution
 * ALU computes `R1 + R0`
 * Result written back to `R1`
-* `Done` asserted after three clock cycles
+* Multi-cycle execution
 
 ---
 
@@ -1233,48 +1214,38 @@ This section summarizes the **instruction sequence applied in the testbench** an
 
 **Applied Inputs**
 
-* `F = 11` (Sub)
-* `Rx = 01` (R1)
-* `Ry = 00` (R0)
+* `F = 11`
+* `Rx = 01`
+* `Ry = 00`
 * `w = 1`
 
-**Expected Outputs / Behavior**
+**Expected Behavior**
 
-* Multi-cycle execution
 * ALU computes `R1 - R0`
 * Result written back to `R1`
-* `Done` asserted after three clock cycles
+* Multi-cycle execution
 
 ---
 
-### **Overall Expected Outcomes**
+## **3.7 Observability During Simulation**
 
-* Instructions execute sequentially without overlap
-* Single-cycle instructions: Load, Move
-* Multi-cycle instructions: Add, Sub
-* `Done` correctly marks instruction completion
-* Data flow on `BusWires` matches control sequencing
+The following signals should be observed in the waveform:
 
----
+* `BusWires`
+* `Done`
+* Register outputs (`R0`, `R1`)
+* Operand register `A`
+* Result register `G`
+* Time-step signals (`T0–T3`)
 
-## **3.6 Observability During Simulation**
-
-During simulation, the following signals should be observed:
-
-* `BusWires` — to track data movement
-* `Done` — to verify instruction completion
-* Register outputs (`R0–R3`)
-* ALU result register (`G`)
-* Time-step progression
-
-Waveform analysis confirms correct sequencing and data flow.
+Correct sequencing and data movement confirm functional correctness.
 
 ---
 
-## **3.7 Summary**
+## **3.8 Summary**
 
-* The testbench verifies all supported instructions
-* Multi-cycle behavior is clearly observable
-* Shared bus usage is validated
-* The testbench is tool-agnostic and deterministic
+* All instructions are verified independently
+* Reset-based isolation simplifies debugging
+* Control-path sequencing is clearly observable
+* The testbench is deterministic and tool-agnostic
 
