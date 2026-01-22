@@ -872,117 +872,120 @@ endmodule
 ```verilog
 module proc (Data, Reset, w, Clock, F, Rx, Ry, Done, BusWires);
 
-input  [7:0] Data;
-input        Reset, w, Clock;
-input  [1:0] F, Rx, Ry;
-output       Done;
-output [7:0] BusWires;
+    //--------------------------------------------------
+    // Top-Level Input and Output Ports
+    //--------------------------------------------------
+    input  [7:0] Data;          // External data input
+    input        Reset, w;      // Reset and instruction start control
+    input        Clock;         // System clock
+    input  [1:0] F;             // Opcode field
+    input  [1:0] Rx, Ry;        // Register selection fields
+    output wire [7:0] BusWires; // Shared internal bus
+    output       Done;          // Instruction completion signal
 
-//--------------------------------------------------
-// Internal control and datapath signals
-//--------------------------------------------------
-reg  [0:3] Rin, Rout;
-reg  [7:0] Sum;
-wire Clear, AddSub, Extern, Ain, Gin, Gout, FRin;
-wire [1:0] Count;
-wire [0:3] T, I, Xreg, Y;
-wire [7:0] R0, R1, R2, R3, A, G;
-wire [5:0] Func;
-reg  [5:0] FuncReg;
+    //--------------------------------------------------
+    // Internal Control and Datapath Signals
+    //--------------------------------------------------
+    reg  [0:3] Rin, Rout;       // Register input/output enables
+    reg  [7:0] Sum;             // ALU output (combinational)
 
-//--------------------------------------------------
-// Function register
-//--------------------------------------------------
-assign Func = {F, Rx, Ry};
+    wire Clear, AddSub;          // Control signals
+    wire Extern, Ain, Gin, Gout; // Datapath control enables
+    wire FRin;                   // Function register load
+    wire [1:0] Count;            // Time-step counter output
+    wire [0:3] T, I;             // Time-step and instruction decode
+    wire [0:3] Xreg, Y;          // Register decode signals
+    wire [7:0] R0, R1, R2, R3;   // General-purpose registers
+    wire [7:0] A, G;             // Operand and result registers
+    wire [1:6] Func, FuncReg;    // Instruction fields and stored instruction
 
-always @(posedge Clock)
-    if (FRin)
-        FuncReg <= Func;
+    integer k;                   // Loop variable for register control
 
-//--------------------------------------------------
-// Instruction decoder
-//--------------------------------------------------
-assign I[0] = ~FuncReg[5] & ~FuncReg[4]; // Load
-assign I[1] = ~FuncReg[5] &  FuncReg[4]; // Move
-assign I[2] =  FuncReg[5] & ~FuncReg[4]; // Add
-assign I[3] =  FuncReg[5] &  FuncReg[4]; // Sub
+    //--------------------------------------------------
+    // Timing Control: Counter and Time-Step Decoder
+    //--------------------------------------------------
+    upcount counter (Clear, Clock, Count); // 2-bit time-step counter
+    dec2to4 decT (Count, 1'b1, T);         // Decode time steps T0–T3
 
-//--------------------------------------------------
-// Register field decoders
-//--------------------------------------------------
-dec2to4 decX (FuncReg[3:2], 1'b1, Xreg);
-dec2to4 decY (FuncReg[1:0], 1'b1, Y);
+    // Counter clear logic and function register control
+    assign Clear = Reset | Done | (~w & T[0]);
+    assign Func  = {F, Rx, Ry};             // Combine instruction fields
+    assign FRin  = w & T[0];                // Load instruction at T0
 
-//--------------------------------------------------
-// Time-step counter and decoder
-//--------------------------------------------------
-upcount U1 (Clear, Clock, Count);
+    //--------------------------------------------------
+    // Function Register
+    //--------------------------------------------------
+    regn functionreg (Func, FRin, Clock, FuncReg);
+        defparam functionreg.n = 6;
 
-assign T[0] = ~Count[1] & ~Count[0];
-assign T[1] = ~Count[1] &  Count[0];
-assign T[2] =  Count[1] & ~Count[0];
-assign T[3] =  Count[1] &  Count[0];
+    //--------------------------------------------------
+    // Instruction and Register Field Decoding
+    //--------------------------------------------------
+    dec2to4 decI (FuncReg[1:2], 1'b1, I);   // Instruction decode
+    dec2to4 decX (FuncReg[3:4], 1'b1, Xreg);// Destination register decode
+    dec2to4 decY (FuncReg[5:6], 1'b1, Y);   // Source register decode
 
-//--------------------------------------------------
-// Control signal generation
-//--------------------------------------------------
-assign Extern = I[0] & T[1];
-assign Ain    = (I[2] | I[3]) & T[1];
-assign Gin    = (I[2] | I[3]) & T[2];
-assign Gout   = (I[2] | I[3]) & T[3];
-assign AddSub = I[3];
+    //--------------------------------------------------
+    // Control Signal Generation
+    //--------------------------------------------------
+    assign Extern = I[0] & T[1];   // External data enable (Load)
+    assign Done   = ((I[0] | I[1]) & T[1]) |
+                    ((I[2] | I[3]) & T[3]); // Instruction completion
+    assign Ain    = (I[2] | I[3]) & T[1];    // Load operand register A
+    assign Gin    = (I[2] | I[3]) & T[2];    // Load ALU result register G
+    assign Gout   = (I[2] | I[3]) & T[3];    // Drive ALU result on bus
+    assign AddSub = I[3];                    // ALU operation select
 
-assign Done = (I[0] | I[1]) & T[1]
-            | (I[2] | I[3]) & T[3];
+    //--------------------------------------------------
+    // Register Input and Output Control
+    //--------------------------------------------------
+    always @(I, T, Xreg, Y)
+        for (k = 0; k < 4; k = k + 1)
+        begin
+            // Register input enable logic
+            Rin[k]  = ((I[0] | I[1]) & T[1] & Xreg[k]) |
+                      ((I[2] | I[3]) & T[3] & Xreg[k]);
 
-assign FRin  = w & T[0];
-assign Clear = Reset | Done | (~w & T[0]);
+            // Register output enable logic
+            Rout[k] = (I[1] & T[1] & Y[k]) |
+                      ((I[2] | I[3]) &
+                      ((T[1] & Xreg[k]) | (T[2] & Y[k])));
+        end
 
-//--------------------------------------------------
-// Register enable logic
-//--------------------------------------------------
-always @(*)
-begin
-    Rin  = 4'b0000;
-    Rout = 4'b0000;
+    //--------------------------------------------------
+    // Datapath: Shared Bus and Registers
+    //--------------------------------------------------
+    trin tri_ext (Data, Extern, BusWires);   // External data to bus
 
-    if ((I[0] | I[1]) & T[1]) Rin = Xreg;
-    if ((I[2] | I[3]) & T[3]) Rin = Xreg;
-    if ((I[1] | I[2] | I[3]) & T[1]) Rout = Y;
-    if ((I[2] | I[3]) & T[2]) Rout = Y;
-end
+    regn reg_0 (BusWires, Rin[0], Clock, R0);
+    regn reg_1 (BusWires, Rin[1], Clock, R1);
+    regn reg_2 (BusWires, Rin[2], Clock, R2);
+    regn reg_3 (BusWires, Rin[3], Clock, R3);
 
-//--------------------------------------------------
-// Datapath registers
-//--------------------------------------------------
-regn R_0 (BusWires, Rin[0], Clock, R0);
-regn R_1 (BusWires, Rin[1], Clock, R1);
-regn R_2 (BusWires, Rin[2], Clock, R2);
-regn R_3 (BusWires, Rin[3], Clock, R3);
+    trin tri_0 (R0, Rout[0], BusWires);
+    trin tri_1 (R1, Rout[1], BusWires);
+    trin tri_2 (R2, Rout[2], BusWires);
+    trin tri_3 (R3, Rout[3], BusWires);
 
-regn RA  (BusWires, Ain, Clock, A);
-regn RG  (Sum, Gin, Clock, G);
+    regn reg_A (BusWires, Ain, Clock, A);    // Operand register A
 
-//--------------------------------------------------
-// ALU
-//--------------------------------------------------
-always @(*)
-    if (AddSub)
-        Sum = A - BusWires;
-    else
-        Sum = A + BusWires;
+    //--------------------------------------------------
+    // Arithmetic Logic Unit (ALU)
+    //--------------------------------------------------
+    always @(AddSub, A, BusWires)
+        if (!AddSub)
+            Sum = A + BusWires;  // Addition
+        else
+            Sum = A - BusWires;  // Subtraction
 
-//--------------------------------------------------
-// Shared bus using tri-state buffers
-//--------------------------------------------------
-trin t0 (Data,   Extern, BusWires);
-trin t1 (R0,     Rout[0], BusWires);
-trin t2 (R1,     Rout[1], BusWires);
-trin t3 (R2,     Rout[2], BusWires);
-trin t4 (R3,     Rout[3], BusWires);
-trin t5 (G,      Gout,    BusWires);
+    //--------------------------------------------------
+    // Result Register and Bus Interface
+    //--------------------------------------------------
+    regn reg_G (Sum, Gin, Clock, G);         // Result register G
+    trin tri_G (G, Gout, BusWires);           // Drive result on bus
 
 endmodule
+
 ```
 
 ---
