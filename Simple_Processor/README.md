@@ -666,3 +666,527 @@ This structured interaction ensures:
 * No bus contention
 * Clear correspondence between instruction semantics and hardware behavior
 
+---
+
+# **PART 2: SYNTHESIZABLE VERILOG RTL**
+
+---
+
+## **2.1 Design Requirements**
+
+The processor RTL satisfies the following requirements:
+
+* Multi-cycle instruction execution using a shared bus
+* Control implemented using:
+
+  * Function register
+  * Opcode decoding
+  * Time-step counter and decoder
+* Datapath consisting of:
+
+  * General-purpose registers
+  * Operand and result registers
+  * Adder/Subtractor ALU
+* Shared bus implemented using tri-state buffers
+* Fully synchronous design
+* Synthesizable using standard FPGA tools
+
+---
+
+## **2.2 Module Interfaces**
+
+---
+
+## **Top-Level Processor Module (`proc`)**
+
+### **Input Signals**
+
+| Signal       | Description                   |
+| ------------ | ----------------------------- |
+| `Data [7:0]` | External data input           |
+| `Clock`      | System clock                  |
+| `Reset`      | Active-high reset             |
+| `w`          | Instruction execution control |
+| `F [1:0]`    | Opcode field                  |
+| `Rx [1:0]`   | Destination register selector |
+| `Ry [1:0]`   | Source register selector      |
+
+---
+
+### **Output Signals**
+
+| Signal           | Description                      |
+| ---------------- | -------------------------------- |
+| `BusWires [7:0]` | Shared internal data bus         |
+| `Done`           | Instruction completion indicator |
+
+---
+
+## **n-Bit Register Module (`regn`)**
+
+### **Input Signals**
+
+| Signal      | Description  |
+| ----------- | ------------ |
+| `R [n-1:0]` | Data input   |
+| `L`         | Load enable  |
+| `Clock`     | System clock |
+
+### **Output Signals**
+
+| Signal      | Description     |
+| ----------- | --------------- |
+| `Q [n-1:0]` | Register output |
+
+---
+
+## **Two-Bit Up-Counter Module (`upcount`)**
+
+### **Input Signals**
+
+| Signal  | Description           |
+| ------- | --------------------- |
+| `Clear` | Counter reset control |
+| `Clock` | System clock          |
+
+### **Output Signals**
+
+| Signal    | Description    |
+| --------- | -------------- |
+| `Q [1:0]` | Counter output |
+
+---
+
+## **2-to-4 Decoder Module (`dec2to4`)**
+
+### **Input Signals**
+
+| Signal    | Description   |
+| --------- | ------------- |
+| `w [1:0]` | Binary input  |
+| `En`      | Enable signal |
+
+### **Output Signals**
+
+| Signal    | Description            |
+| --------- | ---------------------- |
+| `y [0:3]` | One-hot decoded output |
+
+---
+
+## **Tri-State Buffer Module (`trin`)**
+
+### **Input Signals**
+
+| Signal      | Description   |
+| ----------- | ------------- |
+| `Y [n-1:0]` | Data input    |
+| `E`         | Enable signal |
+
+### **Output Signals**
+
+| Signal      | Description      |
+| ----------- | ---------------- |
+| `F [n-1:0]` | Tri-state output |
+
+---
+
+## **2.3 Submodule RTL Code **
+
+---
+
+### **2.3.1 n-Bit Register**
+
+```verilog
+module regn (R, L, Clock, Q);
+    parameter n = 8;
+    input  [n-1:0] R;
+    input          L, Clock;
+    output reg [n-1:0] Q;
+
+    always @(posedge Clock)
+        if (L)
+            Q <= R;
+endmodule
+```
+
+---
+
+### **2.3.2 2-to-4 Decoder**
+
+```verilog
+module dec2to4 (w, En, y);
+    input  [1:0] w;
+    input        En;
+    output reg [0:3] y;
+
+    always @(*)
+        if (En)
+            case (w)
+                2'b00: y = 4'b1000;
+                2'b01: y = 4'b0100;
+                2'b10: y = 4'b0010;
+                2'b11: y = 4'b0001;
+            endcase
+        else
+            y = 4'b0000;
+endmodule
+```
+
+---
+
+### **2.3.3 Two-Bit Up Counter**
+
+```verilog
+module upcount (Clear, Clock, Q);
+    input        Clear, Clock;
+    output reg [1:0] Q;
+
+    always @(posedge Clock)
+        if (Clear)
+            Q <= 2'b00;
+        else
+            Q <= Q + 1'b1;
+endmodule
+```
+
+---
+
+### **2.3.4 Tri-State Buffer**
+
+```verilog
+module trin (Y, E, F);
+    parameter n = 8;
+    input  [n-1:0] Y;
+    input          E;
+    output wire [n-1:0] F;
+
+    assign F = E ? Y : 'bz;
+endmodule
+```
+
+---
+
+## **2.4 Top-Level Processor RTL**
+
+```verilog
+module proc (Data, Reset, w, Clock, F, Rx, Ry, Done, BusWires);
+
+input  [7:0] Data;
+input        Reset, w, Clock;
+input  [1:0] F, Rx, Ry;
+output       Done;
+output [7:0] BusWires;
+
+//--------------------------------------------------
+// Internal control and datapath signals
+//--------------------------------------------------
+reg  [0:3] Rin, Rout;
+reg  [7:0] Sum;
+wire Clear, AddSub, Extern, Ain, Gin, Gout, FRin;
+wire [1:0] Count;
+wire [0:3] T, I, Xreg, Y;
+wire [7:0] R0, R1, R2, R3, A, G;
+wire [5:0] Func;
+reg  [5:0] FuncReg;
+
+//--------------------------------------------------
+// Function register
+//--------------------------------------------------
+assign Func = {F, Rx, Ry};
+
+always @(posedge Clock)
+    if (FRin)
+        FuncReg <= Func;
+
+//--------------------------------------------------
+// Instruction decoder
+//--------------------------------------------------
+assign I[0] = ~FuncReg[5] & ~FuncReg[4]; // Load
+assign I[1] = ~FuncReg[5] &  FuncReg[4]; // Move
+assign I[2] =  FuncReg[5] & ~FuncReg[4]; // Add
+assign I[3] =  FuncReg[5] &  FuncReg[4]; // Sub
+
+//--------------------------------------------------
+// Register field decoders
+//--------------------------------------------------
+dec2to4 decX (FuncReg[3:2], 1'b1, Xreg);
+dec2to4 decY (FuncReg[1:0], 1'b1, Y);
+
+//--------------------------------------------------
+// Time-step counter and decoder
+//--------------------------------------------------
+upcount U1 (Clear, Clock, Count);
+
+assign T[0] = ~Count[1] & ~Count[0];
+assign T[1] = ~Count[1] &  Count[0];
+assign T[2] =  Count[1] & ~Count[0];
+assign T[3] =  Count[1] &  Count[0];
+
+//--------------------------------------------------
+// Control signal generation
+//--------------------------------------------------
+assign Extern = I[0] & T[1];
+assign Ain    = (I[2] | I[3]) & T[1];
+assign Gin    = (I[2] | I[3]) & T[2];
+assign Gout   = (I[2] | I[3]) & T[3];
+assign AddSub = I[3];
+
+assign Done = (I[0] | I[1]) & T[1]
+            | (I[2] | I[3]) & T[3];
+
+assign FRin  = w & T[0];
+assign Clear = Reset | Done | (~w & T[0]);
+
+//--------------------------------------------------
+// Register enable logic
+//--------------------------------------------------
+always @(*)
+begin
+    Rin  = 4'b0000;
+    Rout = 4'b0000;
+
+    if ((I[0] | I[1]) & T[1]) Rin = Xreg;
+    if ((I[2] | I[3]) & T[3]) Rin = Xreg;
+    if ((I[1] | I[2] | I[3]) & T[1]) Rout = Y;
+    if ((I[2] | I[3]) & T[2]) Rout = Y;
+end
+
+//--------------------------------------------------
+// Datapath registers
+//--------------------------------------------------
+regn R_0 (BusWires, Rin[0], Clock, R0);
+regn R_1 (BusWires, Rin[1], Clock, R1);
+regn R_2 (BusWires, Rin[2], Clock, R2);
+regn R_3 (BusWires, Rin[3], Clock, R3);
+
+regn RA  (BusWires, Ain, Clock, A);
+regn RG  (Sum, Gin, Clock, G);
+
+//--------------------------------------------------
+// ALU
+//--------------------------------------------------
+always @(*)
+    if (AddSub)
+        Sum = A - BusWires;
+    else
+        Sum = A + BusWires;
+
+//--------------------------------------------------
+// Shared bus using tri-state buffers
+//--------------------------------------------------
+trin t0 (Data,   Extern, BusWires);
+trin t1 (R0,     Rout[0], BusWires);
+trin t2 (R1,     Rout[1], BusWires);
+trin t3 (R2,     Rout[2], BusWires);
+trin t4 (R3,     Rout[3], BusWires);
+trin t5 (G,      Gout,    BusWires);
+
+endmodule
+```
+
+---
+
+## **2.5 Design Characteristics**
+
+* Multi-cycle processor with implicit FSM control
+* Shared bus architecture using tri-state buffers
+* Clear separation of datapath and control path
+* Deterministic instruction execution using time steps
+* Minimal hardware with educational clarity
+* Fully synthesizable and simulation-safe RTL
+
+---
+
+# **PART 3: TESTBENCH (VERIFICATION)**
+
+---
+
+## **3.1 Purpose of the Testbench**
+
+The purpose of this testbench is to verify the correct functional operation of the simple processor by applying representative instructions and observing the resulting behavior over multiple clock cycles.
+
+---
+
+## **3.2 Objectives**
+
+The testbench aims to:
+
+* Verify correct execution of Load, Move, Add, and Sub instructions
+* Confirm correct sequencing of multi-cycle instructions
+* Validate shared bus operation
+* Ensure correct assertion of the `Done` signal
+* Verify reset and instruction start (`w`) handling
+
+---
+
+## **3.3 Verification Strategy**
+
+A **directed testing approach** is used:
+
+* Instructions are applied one at a time
+* Inputs are held stable until instruction completion
+* The next instruction is issued only after `Done` is asserted
+* Verification is performed using waveform inspection
+
+This strategy provides deterministic and transparent verification.
+
+---
+
+## **3.4 Instruction Application Methodology**
+
+Each instruction is applied using the following sequence:
+
+1. Apply opcode (`F`) and register selectors (`Rx`, `Ry`)
+2. Assert `w = 1` to start execution
+3. Hold all instruction inputs constant
+4. Wait for `Done = 1`
+5. Deassert `w`
+6. Proceed to the next instruction
+
+This ensures that **instructions do not overlap** and the control path completes one instruction before starting the next.
+
+---
+
+## **3.5 Complete Testbench Code**
+
+```verilog
+module tb_proc;
+
+    //--------------------------------------------------
+    // Signal Declarations
+    //--------------------------------------------------
+    reg  [7:0] Data;
+    reg        Reset;
+    reg        w;
+    reg        Clock;
+    reg  [1:0] F;
+    reg  [1:0] Rx, Ry;
+
+    wire [7:0] BusWires;
+    wire       Done;
+
+    //--------------------------------------------------
+    // DUT Instantiation
+    //--------------------------------------------------
+    proc DUT (
+        .Data     (Data),
+        .Reset    (Reset),
+        .w        (w),
+        .Clock    (Clock),
+        .F        (F),
+        .Rx       (Rx),
+        .Ry       (Ry),
+        .Done     (Done),
+        .BusWires (BusWires)
+    );
+
+    //--------------------------------------------------
+    // Clock Generation (10 time-unit period)
+    //--------------------------------------------------
+    always #5 Clock = ~Clock;
+
+    //--------------------------------------------------
+    // Test Sequence
+    //--------------------------------------------------
+    initial begin
+
+        // ---------------------------------------------
+        // Initialization and Reset
+        // ---------------------------------------------
+        Clock = 0;
+        Reset = 1;
+        w     = 0;
+        Data  = 0;
+        F     = 0;
+        Rx    = 0;
+        Ry    = 0;
+
+        #10;
+        Reset = 0;
+
+        // ---------------------------------------------
+        // Test Case 1: Load Instruction
+        // Load Data into R0
+        // ---------------------------------------------
+        #10;
+        Data = 8'h0A;
+        F    = 2'b00;   // Load
+        Rx   = 2'b00;   // R0
+        w    = 1;
+
+        wait (Done);
+        w = 0;
+
+        // ---------------------------------------------
+        // Test Case 2: Move Instruction
+        // Move R0 to R1
+        // ---------------------------------------------
+        #10;
+        F  = 2'b01;     // Move
+        Rx = 2'b01;     // R1
+        Ry = 2'b00;     // R0
+        w  = 1;
+
+        wait (Done);
+        w = 0;
+
+        // ---------------------------------------------
+        // Test Case 3: Add Instruction
+        // R1 = R1 + R0
+        // ---------------------------------------------
+        #10;
+        F  = 2'b10;     // Add
+        Rx = 2'b01;     // R1
+        Ry = 2'b00;     // R0
+        w  = 1;
+
+        wait (Done);
+        w = 0;
+
+        // ---------------------------------------------
+        // Test Case 4: Sub Instruction
+        // R1 = R1 - R0
+        // ---------------------------------------------
+        #10;
+        F  = 2'b11;     // Sub
+        Rx = 2'b01;     // R1
+        Ry = 2'b00;     // R0
+        w  = 1;
+
+        wait (Done);
+        w = 0;
+
+        // ---------------------------------------------
+        // End Simulation
+        // ---------------------------------------------
+        #50;
+        $stop;
+    end
+
+endmodule
+```
+
+---
+
+## **3.6 Observability During Simulation**
+
+During simulation, the following signals should be observed:
+
+* `BusWires` — to track data movement
+* `Done` — to verify instruction completion
+* Register outputs (`R0–R3`)
+* ALU result register (`G`)
+* Time-step progression
+
+Waveform analysis confirms correct sequencing and data flow.
+
+---
+
+## **3.7 Summary**
+
+* The testbench verifies all supported instructions
+* Multi-cycle behavior is clearly observable
+* Shared bus usage is validated
+* The testbench is tool-agnostic and deterministic
+
