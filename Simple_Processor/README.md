@@ -1757,3 +1757,8 @@ set_property IOSTANDARD LVCMOS33 [get_ports {Ry[0]}]
 # **Part-8: Final Project Summary**
 
 ---
+
+<img width="1434" height="880" alt="image" src="https://github.com/user-attachments/assets/035f374f-8f13-4b90-bc60-353549b716fc" />
+<img width="1435" height="878" alt="image" src="https://github.com/user-attachments/assets/c84d169e-41c3-4ad4-8e5b-aa7d7aca9d6b" />
+<img width="716" height="168" alt="image" src="https://github.com/user-attachments/assets/dd4f34a4-9a8a-4264-ae23-c3bb17fba98c" />
+
