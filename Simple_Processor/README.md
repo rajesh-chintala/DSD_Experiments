@@ -1249,3 +1249,236 @@ Correct sequencing and data movement confirm functional correctness.
 * Control-path sequencing is clearly observable
 * The testbench is deterministic and tool-agnostic
 
+
+<img width="1435" height="879" alt="image" src="https://github.com/user-attachments/assets/83bc63d4-34cc-49f0-92ac-5c8ce70e6ace" />
+
+<img width="1627" height="881" alt="image" src="https://github.com/user-attachments/assets/6e6f5fe2-ad39-46b8-a4dc-41b71e29a9df" />
+
+<img width="1617" height="878" alt="image" src="https://github.com/user-attachments/assets/87f10027-58dc-41ca-984b-9cad0f935fda" />
+
+<img width="1433" height="877" alt="image" src="https://github.com/user-attachments/assets/0b12c5c4-e918-47c6-8ed2-7f0fc9c47ce5" />
+
+<img width="1918" height="1041" alt="image" src="https://github.com/user-attachments/assets/f02a22f2-d896-4d59-808e-5edc574ab520" />
+
+<img width="1920" height="1041" alt="image" src="https://github.com/user-attachments/assets/7fc175ab-f571-4bb5-91eb-6cb200f00469" />
+
+<img width="1920" height="1040" alt="image" src="https://github.com/user-attachments/assets/027d4e75-dff0-4b33-af16-a548f987b719" />
+
+---
+
+# **PART 4: WAVEFORM & TIMING EXPLANATION**
+
+---
+
+## **4.1 Overview of Observed Waveform**
+
+The waveform demonstrates the execution of four instructions in sequence:
+
+1. **Load**
+2. **Move**
+3. **Add**
+4. **Sub**
+
+Each instruction is initiated by asserting `w` and completes when `Done` is asserted.
+The processor operates in **multiple time steps (T0–T3)** controlled by the internal time-step counter.
+
+Key signals observed:
+
+* `Clock`
+* `Reset`
+* `w`
+* `F`, `Rx`, `Ry`
+* `BusWires`
+* `Done`
+* Internal registers (`R0`, `R1`, `A`, `G`, `Sum`)
+
+---
+
+## **4.2 Clock and Reset Behavior**
+
+* The clock is a **free-running periodic signal** with a constant period.
+* `Reset` is asserted **before each instruction**:
+
+  * Clears the time-step counter
+  * Resets control sequencing
+  * Ensures independent instruction execution
+
+This reset-before-instruction approach simplifies verification and ensures deterministic behavior.
+
+---
+
+## **4.3 Instruction Start and Completion (`w` and `Done`)**
+
+* `w` is asserted for **one clock cycle** to initiate instruction execution.
+* When `w = 1` at **T0**:
+
+  * Instruction fields `{F, Rx, Ry}` are loaded into the function register.
+* `Done` is asserted:
+
+  * At **T1** for single-cycle instructions (Load, Move)
+  * At **T3** for multi-cycle instructions (Add, Sub)
+
+Once `Done = 1`, the instruction is complete and the time-step counter is cleared.
+
+---
+
+## **4.4 Load Instruction Timing**
+
+**Observed Opcode:** `F = 00`
+
+### **Operation**
+
+* External data is loaded into a general-purpose register.
+
+### **Waveform Interpretation**
+
+* At `T1`:
+
+  * `Extern = 1`
+  * `BusWires` carries the value from `Data`
+  * Destination register (`R0`) loads the value
+* `Done` is asserted in the same cycle
+
+### **Result**
+
+* `R0` updates to `00001010` (decimal 10)
+* Instruction completes in **one clock cycle**
+
+---
+
+## **4.5 Move Instruction Timing**
+
+**Observed Opcode:** `F = 01`
+
+### **Operation**
+
+* Data is transferred from source register to destination register.
+
+### **Waveform Interpretation**
+
+* At `T1`:
+
+  * Source register (`R0`) drives `BusWires`
+  * Destination register (`R1`) captures the value
+* `Done` is asserted at `T1`
+
+### **Result**
+
+* `R1` becomes `00001010`
+* No ALU involvement
+* Single-cycle execution confirmed
+
+---
+
+## **4.6 Add Instruction Timing**
+
+**Observed Opcode:** `F = 10`
+
+### **Operation**
+
+* `R1 = R1 + R0`
+
+### **Cycle-by-Cycle Explanation**
+
+**T1**
+
+* `Rout = X` → Destination register value placed on bus
+* `Ain = 1` → Operand register `A` loads value
+
+**T2**
+
+* `Rout = Y` → Source register drives bus
+* `Gin = 1` → ALU performs addition
+* Result stored in register `G`
+
+**T3**
+
+* `Gout = 1` → ALU result placed on bus
+* `Rin = X` → Result written back to destination register
+* `Done = 1`
+
+### **Result**
+
+* `Sum` and `G` show correct addition
+* `R1` updates to `00010100` (decimal 20)
+* Multi-cycle behavior clearly visible
+
+---
+
+## **4.7 Sub Instruction Timing**
+
+**Observed Opcode:** `F = 11`
+
+### **Operation**
+
+* `R1 = R1 − R0`
+
+### **Cycle-by-Cycle Explanation**
+
+**T1**
+
+* Operand register `A` loads destination register value
+
+**T2**
+
+* ALU performs subtraction (`AddSub = 1`)
+* Result stored in `G`
+
+**T3**
+
+* ALU result written back to destination register
+* `Done` asserted
+
+### **Result**
+
+* `R1` returns to `00001010` (decimal 10)
+* Subtraction verified correctly
+
+---
+
+## **4.8 Shared Bus Behavior**
+
+The waveform clearly shows:
+
+* `BusWires` driven by **only one source at a time**
+* High-impedance (`Z`) when no source is enabled
+* Proper tri-state arbitration from:
+
+  * External data
+  * Register outputs
+  * ALU result register
+
+This confirms correct **tri-state bus control**.
+
+---
+
+## **4.9 Control Path and Datapath Synchronization**
+
+The waveform demonstrates tight coordination between:
+
+* **Control path**
+
+  * Instruction decoding
+  * Time-step sequencing
+  * Control signal assertion
+* **Datapath**
+
+  * Register loading
+  * ALU operation
+  * Bus transfers
+
+Each instruction progresses deterministically through the expected time steps.
+
+---
+
+## **4.10 Summary of Observations**
+
+* Single-cycle instructions complete at `T1`
+* Multi-cycle instructions complete at `T3`
+* `Done` accurately marks instruction completion
+* Bus conflicts are avoided
+* ALU operations are correctly sequenced
+* Reset ensures clean instruction boundaries
+
+---
+
