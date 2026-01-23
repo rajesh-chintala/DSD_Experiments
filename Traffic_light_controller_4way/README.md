@@ -1,3 +1,334 @@
+# **PART 1: THEORY, ARCHITECTURE, FSM DESIGN**
+
+**Four-Way Traffic Light Controller**
+
+---
+
+## **1. Concept / System Overview**
+
+A **four-way traffic light controller** is a sequential digital system used to regulate traffic flow at an intersection involving:
+
+* Two **main roads**
+* Two **side roads**
+* Straight movements
+* Dedicated **left-turn movements**
+* Safety-critical yellow transitions
+* A special **blink mode** during non-traffic hours
+
+The controller operates cyclically, ensuring that:
+
+* Only **non-conflicting traffic movements** are allowed simultaneously
+* Adequate time is provided for each movement
+* Transitions between phases are safe and deterministic
+
+This design models a **realistic urban intersection** using a **finite state machine (FSM)** combined with **counter-based timing**.
+
+---
+
+## **2. Need for Sequential Operation**
+
+A traffic light controller **cannot be implemented as a purely combinational circuit** because:
+
+* Traffic signals must remain active for **specific durations**
+* State transitions depend on **elapsed time**, not just inputs
+* The system must **remember** the current traffic phase
+* Blink mode must override normal sequencing
+
+Hence, the system inherently requires:
+
+* Memory elements
+* Clock-driven state transitions
+* Deterministic sequencing
+
+This makes the controller a **synchronous sequential system**.
+
+---
+
+## **3. Role of Finite State Machine (FSM)**
+
+The FSM forms the **control core** of the traffic controller.
+
+### FSM Responsibilities:
+
+* Define the **order** of traffic phases
+* Decide **which lights are ON/OFF** in each phase
+* Control **when timers start and stop**
+* Handle **priority transitions** (e.g., blink mode)
+
+### FSM Characteristics:
+
+* **Moore-type FSM**
+* Outputs depend only on the **current state**
+* State transitions occur on **clock edges**
+* Ensures **glitch-free outputs**, which is critical for safety systems
+
+---
+
+## **4. Description of the Four-Way Traffic Scenario**
+
+The intersection consists of:
+
+### Main Roads
+
+* Straight movement (Green → Yellow → Red)
+* Dedicated left-turn signals
+
+### Side Roads
+
+* Straight movement
+* Dedicated left-turn signals
+
+### Operating Modes
+
+1. **Normal Traffic Mode**
+
+   * Cyclic sequencing of main road and side road traffic
+   * Yellow transitions between phases
+2. **Blink Mode**
+
+   * All yellow lights flash
+   * Used during low-traffic or night hours
+
+---
+
+## **5. Datapath Overview**
+
+The datapath of the traffic controller is **time-driven**, not data-driven.
+
+### Datapath Components:
+
+* One **free-running base counter**
+* Multiple **derived timers**
+* Timer completion flags used by FSM
+
+### Datapath Function:
+
+* Generate a **time base**
+* Measure elapsed time for each traffic phase
+* Provide timing feedback to the FSM
+
+---
+# **6. Datapath Architecture**
+
+The datapath of the four-way traffic light controller is responsible for **all timing-related operations**.
+It converts the high-frequency system clock into **coarse, human-perceivable time intervals** required for traffic control.
+
+---
+
+## **6.1 Clock and Time-Base Generation**
+
+The controller operates with a system clock of **50 MHz**, which corresponds to:
+
+[
+\text{Clock period} = \frac{1}{50,\text{MHz}} = 20,\text{ns}
+]
+
+Traffic signals must remain active for durations in the order of **seconds**, not nanoseconds.
+Therefore, the datapath generates a **0.1 s time base** using a **free-running counter**.
+
+---
+
+## **6.2 Free-Running Base Counter Operation**
+
+A **22-bit counter** (`cnt1_reg[21:0]`) is used to divide the 50 MHz clock:
+
+* The counter increments **on every rising edge** of the clock
+* When the counter reaches **4,999,999**, it resets to zero
+* This count corresponds to:
+
+[
+4{,}999{,}999 \times 20,\text{ns} = 0.1,\text{s}
+]
+
+Thus, the counter produces a **periodic 0.1 s timing tick**, which serves as the **fundamental time unit** for the entire system.
+
+This counter runs **continuously**, independent of the FSM state.
+
+---
+
+## **6.3 Derived Timers and Their Purpose**
+
+Using the 0.1 s time base, the datapath implements multiple **derived timers**, each serving a specific traffic function:
+
+| Timer   | Counter         | Purpose                     | Duration |
+| ------- | --------------- | --------------------------- | -------- |
+| Timer-1 | `cnt2_reg[8:0]` | Main road straight movement | 45 s     |
+| Timer-2 | `cnt3_reg[5:0]` | Yellow transition           | 5 s      |
+| Timer-3 | `cnt4_reg[7:0]` | Side road / left turns      | 25 s     |
+| Timer-4 | `cnt5_reg[7:0]` | Blink mode                  | 0.5 s    |
+
+Each timer counts **0.1 s ticks**, not raw clock cycles.
+
+---
+
+## **6.4 Timer Enable and Control Behavior**
+
+The FSM controls the datapath using **timer enable signals**:
+
+* `start_timer_1`
+* `start_timer_2`
+* `start_timer_3`
+
+### Timer Behavior:
+
+* A timer increments **only when its corresponding start signal is asserted**
+* If the start signal is deasserted, the timer **holds its value**
+* When the timer reaches its programmed limit:
+
+  * A **completion flag (`res_cnt*`)** is asserted
+  * The counter resets to zero
+  * The FSM uses this flag to advance to the next state
+
+This ensures **precise and deterministic timing** for each traffic phase.
+
+---
+
+## **6.5 Timer Completion Flags**
+
+Each timer produces a completion signal:
+
+| Signal     | Meaning                                  |
+| ---------- | ---------------------------------------- |
+| `res_cnt2` | Main road straight duration completed    |
+| `res_cnt3` | Yellow phase completed                   |
+| `res_cnt4` | Side road / left turn duration completed |
+| `res_cnt5` | Blink interval completed                 |
+
+These flags form the **primary interface between the datapath and control path**.
+---
+
+## **6.7 Datapath Design Characteristics**
+
+* Fully synchronous design
+* Single clock domain
+* Counter-based timing (hardware efficient)
+* No combinational delays
+* Deterministic and repeatable behavior
+
+---
+
+## **7. Control Path Architecture**
+
+The **control path** is implemented entirely by the FSM.
+
+### Control Path Responsibilities:
+
+* Enable specific timers (`start_timer_*`)
+* Monitor timer completion flags
+* Decide next FSM state
+* Override normal operation during blink mode
+
+### Priority Rule:
+
+> **Blink mode has the highest priority and can interrupt any state.**
+
+---
+
+## **8. Inputs and Outputs**
+
+### **Top-Level Input Signals**
+
+| Signal    | Description                  |
+| --------- | ---------------------------- |
+| `clk`     | System clock                 |
+| `reset_n` | Active-low reset             |
+| `blink`   | Enables blinking-yellow mode |
+
+---
+
+### **Output Signals – Main Road**
+
+| Signal         | Description         |
+| -------------- | ------------------- |
+| `MG1`, `MG2`   | Main road green     |
+| `MY1`, `MY2`   | Main road yellow    |
+| `MR1`, `MR2`   | Main road red       |
+| `MLT1`, `MLT2` | Main road left-turn |
+
+---
+
+### **Output Signals – Side Road**
+
+| Signal         | Description         |
+| -------------- | ------------------- |
+| `SG1`, `SG2`   | Side road green     |
+| `SY1`, `SY2`   | Side road yellow    |
+| `SR1`, `SR2`   | Side road red       |
+| `SLT1`, `SLT2` | Side road left-turn |
+
+---
+
+## **9. FSM State Definitions**
+
+The FSM consists of **13 states**:
+
+| State | Description              |
+| ----- | ------------------------ |
+| `S0`  | Main road straight green |
+| `S1`  | Main road yellow         |
+| `S2`  | Main road 1 left turn    |
+| `S3`  | Main road yellow         |
+| `S4`  | Main road 2 left turn    |
+| `S5`  | Main road yellow         |
+| `S6`  | Side road straight green |
+| `S7`  | Side road yellow         |
+| `S8`  | Side road 1 left turn    |
+| `S9`  | Side road yellow         |
+| `S10` | Side road 2 left turn    |
+| `S11` | Side road yellow         |
+| `S12` | Blink mode               |
+
+---
+
+## **10. FSM State Transition Behavior**
+
+### Normal Operation:
+
+* FSM advances sequentially
+* Transitions occur only after:
+
+  * Corresponding timer expires
+* Yellow states act as **safety buffers**
+
+### Blink Mode:
+
+* FSM immediately jumps to `S12`
+* Remains in blink state while `blink = 1`
+* Returns to `S0` when blink is deasserted
+
+---
+
+## **11. Timing Behavior (Conceptual)**
+
+| Phase         | Real Time | Simulation Time |
+| ------------- | --------- | --------------- |
+| Base time     | 0.1 s     | 0.1 ns          |
+| Main straight | 45 s      | 45 ns           |
+| Side / left   | 25 s      | 25 ns           |
+| Yellow        | 5 s       | 5 ns            |
+| Blink         | 0.5 s     | 0.5 ns          |
+
+This scaling affects **only simulation**, not hardware behavior.
+
+---
+
+## **12. Design Strategy and Rationale**
+
+* Moore FSM chosen for **glitch-free outputs**
+* Counter-based timing ensures **precise durations**
+* Shared base counter reduces hardware
+* Conservative yellow signaling improves safety
+* Priority-based blink handling ensures robustness
+
+---
+
+## **13. Summary**
+
+* The four-way traffic controller is a **time-driven FSM-controlled system**
+* Datapath handles **timing**, control path handles **sequencing**
+* FSM ensures **safe, deterministic traffic flow**
+* Design is suitable for **FPGA implementation** and **real-world control systems**
+
 ---
 
 # **PART 2: SYNTHESIZABLE VERILOG RTL**
@@ -128,6 +459,9 @@ The four-way traffic light controller is designed to meet the following requirem
 /*---------------- Timing Parameters ----------------*/
 /* For 50 MHz clock → 0.1s time base */
 `define time_base 22'd4999999
+
+/* For simulation clock which is 50GHz or 20ps, count of 5 enough for time base of 0.1ns, which is simulation friendly 
+`define time_base 23'd4 */
 
 /* Timer count values (in units of 0.1 s) */
 `define load_cnt2 9'd449   // 45 seconds
@@ -718,18 +1052,19 @@ This minimizes hardware duplication and simplifies timing control.
 
 # **PART 3: TESTBENCH (VERIFICATION)**
 
+
 ---
 
 ## **3.1 Purpose of the Testbench**
 
-The purpose of this testbench is to verify the correct operation of the four-way traffic light controller by simulating:
+The purpose of this testbench is to verify the functional correctness of the four-way traffic light controller by simulating:
 
 * Normal traffic light sequencing
 * Blink mode operation during non-traffic hours
 * Proper response to reset
-* Continuous FSM operation over long durations
+* FSM progression across multiple traffic states
 
-The testbench is designed to observe **one or more complete traffic cycles**, ensuring correctness of timing and sequencing.
+The testbench focuses on **functional verification of the FSM and control logic**, not real-time traffic accuracy.
 
 ---
 
@@ -737,53 +1072,104 @@ The testbench is designed to observe **one or more complete traffic cycles**, en
 
 The objectives of the testbench are to:
 
-* Validate correct timing of main road, side road, and left-turn signals
-* Verify correct sequencing of green, yellow, and red phases
+* Validate correct sequencing of main road, side road, and left-turn signals
+* Verify correct assertion of green, yellow, and red phases
 * Confirm correct operation of blink mode (all yellow flashing)
-* Ensure proper initialization and reset behavior
-* Observe long-duration FSM stability
+* Ensure proper FSM initialization and reset behavior
+* Observe stable and glitch-free outputs across state transitions
 
 ---
 
 ## **3.3 Verification Strategy**
 
-A **directed and time-driven verification strategy** is used:
+A **directed and time-scaled verification strategy** is adopted:
 
 * Apply asynchronous active-low reset
-* Allow FSM to run freely without intervention
-* Enable blink mode after sufficient normal operation
-* Disable blink mode and resume normal operation
-* Observe waveform behavior for correctness
+* Allow the FSM to execute continuously
+* Enable blink mode after normal operation
+* Disable blink mode and resume normal sequencing
+* Observe waveform outputs for correctness
 
-This strategy mirrors **realistic operation conditions** of a traffic controller.
-
----
-
-## **3.4 Testbench Design Considerations**
-
-* Clock frequency corresponds to **50 MHz operation**
-* Time base matches the design’s internal timing assumptions
-* Simulation runs long enough to capture:
-
-  * Main road green phase
-  * Yellow transitions
-  * Side road and left-turn phases
-  * Blink mode behavior
+This strategy preserves **logical behavior** while using **scaled simulation timing**.
 
 ---
 
-## **3.5 Complete Testbench Code (Textbook)**
+## **3.4 Testbench Design Considerations and Time Scaling**
+
+### **Need for Time Scaling**
+
+In real hardware:
+
+* Clock frequency = **50 MHz**
+* Clock period = **20 ns**
+* Internal time base = **0.1 s**
+
+To generate this time base:
+[
+\frac{0.1\ \text{s}}{20\ \text{ns}} = 5{,}000{,}000\ \text{clock cycles}
+]
+
+Simulating millions of clock cycles for each FSM transition is **computationally expensive** and impractical in RTL simulation.
+
+---
+
+### **Simulation Time Scaling Method**
+
+To make simulation feasible while preserving FSM behavior:
+
+* Timescale is set to `1ns/1ps`
+* Testbench clock half-period is set to **10 ps**
+* Full clock period becomes **20 ps**
+
+Thus, the simulation clock is a **time-scaled equivalent** of the real hardware clock.
+
+---
+
+### **Scaled Time Base Derivation**
+
+Target simulation time base = **0.1 ns**
+
+Number of clock cycles required:
+[
+\frac{0.1\ \text{ns}}{20\ \text{ps}} = 5\ \text{clock cycles}
+]
+
+Hence, a counter value of **5** in simulation represents one **0.1 ns time tick**, which is a scaled equivalent of the **0.1 s hardware time base**.
+
+---
+
+### **Real-Time vs Simulation-Time Mapping**
+
+| Function              | Real Hardware Time | Simulation Time |
+| --------------------- | ------------------ | --------------- |
+| Base time tick        | 0.1 s              | 0.1 ns          |
+| Main road green       | 45 s               | 45 ns           |
+| Side road / left turn | 25 s               | 25 ns           |
+| Yellow phase          | 5 s                | 5 ns            |
+| Blink period          | 0.5 s              | 0.5 ns          |
+
+Only the **absolute time scale** is compressed; **relative sequencing and FSM behavior remain unchanged**.
+
+---
+
+### **Key Clarification**
+
+The simulation does **not represent real traffic durations**.
+It validates:
+
+* FSM sequencing
+* Control signal correctness
+* Counter–FSM interaction
+
+Real-time accuracy is achieved **only during FPGA or ASIC implementation**, not simulation.
+
+---
+
+## **3.5 Complete Testbench Code (Simulation-Scaled)**
 
 ```verilog
-/*---------------------------------------------------------
-  Test Bench for Traffic Light Controller
-  File Name : traffic_controller_test.v
----------------------------------------------------------*/
-
-`define clkperiodby2 10   // 10 ns is half clock period (50 MHz)
-
-`include "traffic_controller.v"
-`timescale 1ns/100ps
+`timescale 1ns/1ps
+`define clkperiodby2 0.01   // 10 ps half-period for simulation
 
 module traffic_controller_test;
 
@@ -842,7 +1228,7 @@ module traffic_controller_test;
     //--------------------------------------------------
     initial begin
         // Initialize inputs
-        clk     = 1'b0;
+        clk     = 1'b1;
         reset_n = 1'b1;
         blink   = 1'b0;
 
@@ -850,19 +1236,16 @@ module traffic_controller_test;
         #20 reset_n = 1'b0;
         #20 reset_n = 1'b1;
 
-        // Run normal traffic operation
-        #600000;
+        // Normal traffic operation
+        #600;
 
         // Enable blink mode
         blink = 1'b1;
-        #50000;
+        #50;
 
         // Resume normal traffic operation
         blink = 1'b0;
-        #50000;
-
-        // Stop simulation
-        $stop;
+        #50;
     end
 
 endmodule
@@ -884,9 +1267,9 @@ endmodule
 
 **Expected Behavior**
 
-* Main road green active initially
-* Yellow lights activate during transitions
-* Left-turn signals operate as per FSM
+* Main road green asserted initially
+* Yellow lights asserted during transitions
+* Left-turn signals enabled as per FSM
 * Side road phases follow main road completion
 * No conflicting green signals
 
@@ -897,7 +1280,7 @@ endmodule
 **Expected Behavior**
 
 * All red and green lights OFF
-* All yellow lights toggle at 1 Hz
+* Yellow lights toggle periodically
 * FSM remains in blink state
 
 ---
@@ -906,9 +1289,9 @@ endmodule
 
 **Expected Behavior**
 
-* FSM exits blink mode
-* Traffic sequence restarts from initial state
-* Normal timing resumes
+* FSM exits blink state
+* Traffic sequence restarts from the initial state
+* Normal sequencing resumes
 
 ---
 
@@ -918,17 +1301,189 @@ Signals to observe in the waveform:
 
 * Main road signals: `MG*`, `MY*`, `MR*`, `MLT*`
 * Side road signals: `SG*`, `SY*`, `SR*`, `SLT*`
-* `clk`, `reset_n`, `blink`
-* Internal counters (optional)
+* Control signals: `clk`, `reset_n`, `blink`
+* FSM state (optional, internal)
 
 ---
 
 ## **3.8 Summary**
 
-* Testbench verifies both normal and blink modes
-* Long simulation ensures FSM stability
-* Textbook timing assumptions are preserved
-* Verification is deterministic and comprehensive
+* Simulation uses time scaling for feasibility
+* FSM behavior remains functionally correct
+* All traffic phases and blink mode are verified
+* Testbench is deterministic and reproducible
 
 ---
 
+<img width="1640" height="886" alt="image" src="https://github.com/user-attachments/assets/324c8836-9dbe-4a3a-8b54-afd203f9b2f2" />
+<img width="1643" height="878" alt="image" src="https://github.com/user-attachments/assets/9318f6de-77a3-4c1e-9fe6-5328f6a62da3" />
+
+# **PART 4: WAVEFORM & TIMING EXPLANATION**
+
+---
+
+## **4.1 Overview of Observed Simulation**
+
+The waveform confirms correct operation of the **four-way traffic light controller** under:
+
+* Normal traffic operation (`blink = 0`)
+* Blink mode operation (`blink = 1`)
+* Proper reset behavior
+* Correct FSM sequencing across multiple states
+
+The FSM transitions, timer expirations, and traffic signal activations align with the **textbook-defined state machine**.
+
+---
+
+## **4.2 Clock and Reset Behavior**
+
+### **Clock (`clk`)**
+
+* Free-running periodic signal
+* Drives all counters and FSM transitions
+* Uniform and stable across the simulation
+
+### **Reset (`reset_n`)**
+
+* Active-low reset
+* When asserted (`reset_n = 0`):
+
+  * FSM state resets to **S0**
+  * All traffic lights are turned OFF
+  * All timers are cleared
+* When deasserted:
+
+  * FSM starts normal traffic sequencing
+
+This behavior is clearly visible at the beginning of the waveform.
+
+---
+
+## **4.3 FSM State Evolution**
+
+The signal `state[3:0]` shows clean transitions through the defined states:
+
+| FSM State | Functional Meaning             |
+| --------- | ------------------------------ |
+| `S0`      | Main road straight green       |
+| `S1`      | Main road yellow               |
+| `S2`      | Main road left turn            |
+| `S3`      | Main road yellow (post left)   |
+| `S4`      | Main road red + side left      |
+| `S5`      | Side road yellow               |
+| `S6`      | Side road straight green       |
+| `S7`      | Side road yellow               |
+| `S8–S11`  | Side left, yellow, transitions |
+| `S12`     | Blink mode                     |
+
+State changes occur **only after the corresponding timer completion flag** (`res_cnt*`) is asserted, confirming proper FSM–datapath synchronization.
+
+---
+
+## **4.4 Main Road Signal Behavior**
+
+### **Main Green (`MG1`, `MG2`)**
+
+* Asserted during **S0**
+* Deasserted before yellow transitions
+* Never overlap with side road green signals
+
+### **Main Yellow (`MY1`, `MY2`)**
+
+* Asserted during **yellow transition states**
+* Remain ON for exactly one yellow timer duration
+* Serve as safe transition indicators
+
+### **Main Red (`MR1`, `MR2`)**
+
+* Asserted when side roads are active
+* Ensure no conflicting traffic flow
+
+### **Main Left Turn (`MLT1`, `MLT2`)**
+
+* Activated only in their designated states
+* Properly isolated from straight and side movements
+
+---
+
+## **4.5 Side Road Signal Behavior**
+
+### **Side Green (`SG1`, `SG2`)**
+
+* Asserted during **side road straight states**
+* Mutually exclusive with main road green
+
+### **Side Yellow (`SY1`, `SY2`)**
+
+* Asserted during side road yellow transitions
+* Visible as short pulses corresponding to the yellow timer
+
+### **Side Red (`SR1`, `SR2`)**
+
+* Asserted whenever main road traffic is active
+
+### **Side Left Turn (`SLT1`, `SLT2`)**
+
+* Enabled only in their allocated FSM states
+* No overlap with straight traffic
+
+---
+
+## **4.6 Timer Behavior and Control**
+
+The counters (`cnt2_reg`, `cnt3_reg`, `cnt4_reg`, `cnt5_reg`) show:
+
+* Incrementing only when their respective `start_timer_*` signal is asserted
+* Resetting immediately when terminal count is reached
+* Generating clean `res_cnt*` pulses used by the FSM
+
+This confirms:
+
+* **Timers are fully controlled by FSM**
+* No free-running or unintended timing behavior
+
+---
+
+## **4.7 Blink Mode Operation**
+
+When `blink = 1`:
+
+* FSM transitions to **S12**
+* All green and red signals are turned OFF
+* All yellow lights (`MY*`, `SY*`) toggle periodically
+* Toggle rate corresponds to **blink timer (0.5 s equivalent)**
+
+When `blink` returns to `0`:
+
+* FSM exits blink state
+* Traffic sequence restarts from **S0**
+
+This behavior is clearly visible in the later portion of the waveform.
+
+---
+
+## **4.8 Absence of Glitches and Conflicts**
+
+From the waveform:
+
+* No simultaneous green signals across conflicting directions
+* No glitches on outputs during state transitions
+* All outputs change synchronously on clock edges
+
+This validates:
+
+* Proper FSM design
+* Safe Moore-style output behavior
+* Correct timer-driven sequencing
+
+---
+
+## **4.9 Summary of Waveform Validation**
+
+* ✔ Correct reset initialization
+* ✔ Accurate timing via counters
+* ✔ Proper FSM state transitions
+* ✔ Safe traffic signal sequencing
+* ✔ Reliable blink mode operation
+
+The simulation waveforms fully validate the **functional correctness and timing integrity** of the four-way traffic light controller design.
