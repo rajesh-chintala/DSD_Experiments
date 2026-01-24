@@ -1234,7 +1234,7 @@ The simulation waveform fully validates the **functional correctness, timing acc
 # Constraints
 
 ```verilog
-create_clock -period 10 -name clk [get_port clk]
+create_clock -period 10.000 -name clk [get_ports clk]
 
 set_property PACKAGE_PIN V11 [get_ports MG1]
 set_property PACKAGE_PIN V12 [get_ports MG2]
@@ -1248,10 +1248,48 @@ set_property PACKAGE_PIN U16 [get_ports SY]
 set_property PACKAGE_PIN V10 [get_ports blink]
 set_property PACKAGE_PIN E3 [get_ports clk]
 set_property PACKAGE_PIN J15 [get_ports reset_n]
+
+set_property IOSTANDARD LVCMOS33 [get_ports MG1]
+set_property IOSTANDARD LVCMOS33 [get_ports MG2]
+set_property IOSTANDARD LVCMOS33 [get_ports MR1]
+set_property IOSTANDARD LVCMOS33 [get_ports MR2]
+set_property IOSTANDARD LVCMOS33 [get_ports MY1]
+set_property IOSTANDARD LVCMOS33 [get_ports MY2]
+set_property IOSTANDARD LVCMOS33 [get_ports SG]
+set_property IOSTANDARD LVCMOS33 [get_ports SR]
+set_property IOSTANDARD LVCMOS33 [get_ports SY]
+set_property IOSTANDARD LVCMOS33 [get_ports blink]
+set_property IOSTANDARD LVCMOS33 [get_ports clk]
+set_property IOSTANDARD LVCMOS33 [get_ports reset_n]
+set_property DRIVE 12 [get_ports MG1]
+set_property DRIVE 12 [get_ports MG2]
+set_property DRIVE 12 [get_ports MR1]
+set_property DRIVE 12 [get_ports MR2]
+set_property DRIVE 12 [get_ports MY1]
+set_property DRIVE 12 [get_ports MY2]
+set_property DRIVE 12 [get_ports SG]
+set_property DRIVE 12 [get_ports SR]
+set_property DRIVE 12 [get_ports SY]
+set_property SLEW SLOW [get_ports MG1]
+set_property SLEW SLOW [get_ports MG2]
+set_property SLEW SLOW [get_ports MR1]
+set_property SLEW SLOW [get_ports MR2]
+set_property SLEW SLOW [get_ports MY1]
+set_property SLEW SLOW [get_ports MY2]
+set_property SLEW SLOW [get_ports SG]
+set_property SLEW SLOW [get_ports SR]
+set_property SLEW SLOW [get_ports SY]
+
 ```
 
 <img width="1629" height="886" alt="image" src="https://github.com/user-attachments/assets/35dea201-6652-4ea3-8dc8-0e3e044b94fd" />
 <img width="1624" height="875" alt="image" src="https://github.com/user-attachments/assets/0087463a-fb16-47b1-9ecd-a9249db00d9b" />
+
+
+<img width="1649" height="880" alt="image" src="https://github.com/user-attachments/assets/0dc91711-9f05-4379-8010-11059ee83b7a" />
+<img width="1639" height="881" alt="image" src="https://github.com/user-attachments/assets/44d606e6-4c26-4836-8abd-d715feddf126" />
+
+<img width="825" height="188" alt="image" src="https://github.com/user-attachments/assets/af074603-bc42-4b28-abdb-33fbfd5086f7" />
 
 
 
