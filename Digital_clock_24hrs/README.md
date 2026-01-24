@@ -10,9 +10,9 @@
 
 A **24-hour digital clock** is a sequential digital system that continuously keeps track of **time in hours, minutes, and seconds**, following the standard 24-hour format:
 
-[
+```math
 00{:}00{:}00 ;\rightarrow; 23{:}59{:}59 ;\rightarrow; 00{:}00{:}00
-]
+```
 
 The clock updates its time **once every second**, making it a **time-driven synchronous system**.
 Unlike combinational circuits, the output depends on **previous time values**, requiring storage and clocked operation.
@@ -105,9 +105,9 @@ In real hardware:
 * Clock period = **20 ns**
 * A divider generates **1 Hz** (1 second tick)
 
-[
+```math
 50{,}000{,}000 \text{ cycles} = 1 \text{ second}
-]
+```
 
 This 1-second pulse drives all time updates.
 
