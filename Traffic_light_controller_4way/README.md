@@ -106,14 +106,15 @@ The datapath of the traffic controller is **time-driven**, not data-driven.
 * Provide timing feedback to the FSM
 
 ---
-# **6. Datapath Architecture**
 
-The datapath of the four-way traffic light controller is responsible for **all timing-related operations**.
+## **6. Datapath Architecture**
+
+The datapath of the four-way traffic light controller is responsible for all **timing-related operations**.
 It converts the high-frequency system clock into **coarse, human-perceivable time intervals** required for traffic control.
 
 ---
 
-## **6.1 Clock and Time-Base Generation**
+### **6.1 Clock and Time-Base Generation**
 
 The controller operates with a system clock of **50 MHz**, which corresponds to:
 
@@ -122,17 +123,18 @@ The controller operates with a system clock of **50 MHz**, which corresponds to:
 ]
 
 Traffic signals must remain active for durations in the order of **seconds**, not nanoseconds.
-Therefore, the datapath generates a **0.1 s time base** using a **free-running counter**.
+Therefore, the datapath generates a **0.1 s time base** using a free-running counter.
 
 ---
 
-## **6.2 Free-Running Base Counter Operation**
+### **6.2 Free-Running Base Counter Operation**
 
 A **22-bit counter** (`cnt1_reg[21:0]`) is used to divide the 50 MHz clock:
 
-* The counter increments **on every rising edge** of the clock
+* The counter increments on every rising edge of the clock
 * When the counter reaches **4,999,999**, it resets to zero
-* This count corresponds to:
+
+This count corresponds to:
 
 [
 4{,}999{,}999 \times 20,\text{ns} = 0.1,\text{s}
@@ -144,7 +146,7 @@ This counter runs **continuously**, independent of the FSM state.
 
 ---
 
-## **6.3 Derived Timers and Their Purpose**
+### **6.3 Derived Timers and Their Purpose**
 
 Using the 0.1 s time base, the datapath implements multiple **derived timers**, each serving a specific traffic function:
 
@@ -159,7 +161,7 @@ Each timer counts **0.1 s ticks**, not raw clock cycles.
 
 ---
 
-## **6.4 Timer Enable and Control Behavior**
+### **6.4 Timer Enable and Control Behavior**
 
 The FSM controls the datapath using **timer enable signals**:
 
@@ -167,23 +169,24 @@ The FSM controls the datapath using **timer enable signals**:
 * `start_timer_2`
 * `start_timer_3`
 
-### Timer Behavior:
+**Timer behavior:**
 
-* A timer increments **only when its corresponding start signal is asserted**
-* If the start signal is deasserted, the timer **holds its value**
-* When the timer reaches its programmed limit:
+* A timer increments only when its corresponding start signal is asserted
+* If the start signal is deasserted, the timer **holds its current value**
 
-  * A **completion flag (`res_cnt*`)** is asserted
-  * The counter resets to zero
-  * The FSM uses this flag to advance to the next state
+When a timer reaches its programmed limit:
 
-This ensures **precise and deterministic timing** for each traffic phase.
+* A completion flag (`res_cnt*`) is asserted
+* The counter resets to zero
+* The FSM uses this flag to advance to the next state
+
+This mechanism ensures **precise and deterministic timing** for each traffic phase.
 
 ---
 
-## **6.5 Timer Completion Flags**
+### **6.5 Timer Completion Flags**
 
-Each timer produces a completion signal:
+Each timer produces a completion signal that interfaces directly with the control path:
 
 | Signal     | Meaning                                  |
 | ---------- | ---------------------------------------- |
@@ -192,11 +195,40 @@ Each timer produces a completion signal:
 | `res_cnt4` | Side road / left turn duration completed |
 | `res_cnt5` | Blink interval completed                 |
 
-These flags form the **primary interface between the datapath and control path**.
+These flags form the **primary datapath-to-control-path interface**.
 
 ---
 
-## **6.7 Datapath Design Characteristics**
+### **6.6 Role of `cnt*_next` Signals in the Datapath**
+
+For each timer counter, the datapath uses a corresponding **next-value signal** (`cnt*_next`) to compute the upcoming counter value before it is registered.
+
+The role of `cnt*_next` signals is:
+
+* To represent **counter + 1** computation
+* To separate **combinational next-value logic** from **sequential storage**
+* To maintain clean, synchronous counter updates
+
+General behavior:
+
+* `cnt*_next = current counter value + 1`
+* On the clock edge:
+
+  * If reset is active → counter resets to zero
+  * If terminal count is reached → counter resets to zero
+  * If enabled → counter loads `cnt*_next`
+  * Otherwise → counter retains its value
+
+Thus:
+
+* `cnt*_next` defines **what the next value should be**
+* FSM control signals define **when that value is loaded**
+
+This separation ensures **clarity, correctness, and synthesizability** of the datapath.
+
+---
+
+### **6.7 Datapath Design Characteristics**
 
 * Fully synchronous design
 * Single clock domain
@@ -1863,6 +1895,10 @@ set_property IOSTANDARD LVCMOS33 [get_ports MY2]
 ---
 
 # **Part 8: PRoject Summary**
+
+<img width="1627" height="852" alt="image" src="https://github.com/user-attachments/assets/75dedaac-2a39-4b17-aa2f-0803d9ffd247" />
+<img width="1641" height="853" alt="image" src="https://github.com/user-attachments/assets/15408a2c-825c-4f96-974e-16f3f6b40667" />
+<img width="829" height="173" alt="image" src="https://github.com/user-attachments/assets/27f45391-5447-4957-8835-c132c33a42a6" />
 
 
 ---
