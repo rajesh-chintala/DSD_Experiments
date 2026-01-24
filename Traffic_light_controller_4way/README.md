@@ -117,9 +117,9 @@ It converts the high-frequency system clock into **coarse, human-perceivable tim
 ### **6.1 Clock and Time-Base Generation**
 
 The controller operates with a system clock of **50 MHz**, which corresponds to:
-$
+```math
 \text{Clock period} = \frac{1}{50,\text{MHz}} = 20,\text{ns}
-$
+```
 Traffic signals must remain active for durations in the order of **seconds**, not nanoseconds.
 Therefore, the datapath generates a **0.1 s time base** using a free-running counter.
 
