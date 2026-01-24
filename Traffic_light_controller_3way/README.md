@@ -1231,7 +1231,193 @@ The simulation waveform fully validates the **functional correctness, timing acc
 
 ---
 
-# Constraints
+# **PART 5: VIVA QUESTIONS, INTERVIEW QUESTIONS, DEBUG SCENARIOS & DESIGN VARIATIONS**
+
+---
+
+## **A) Viva Questions (University / Lab-Oriented)**
+
+1. What is a traffic light controller?
+2. Why is an FSM required for traffic control systems?
+3. Why is this design implemented as a **Moore FSM**?
+4. How many states are used in the three-way controller and why?
+5. What does each FSM state represent in real traffic terms?
+6. Why are timers required instead of simple delays?
+7. How is a 0.1 s time base generated from a 50 MHz clock?
+8. Why are multiple counters used instead of one large counter?
+9. What is the role of `start_timer_*` signals?
+10. What does `res_cnt*` indicate?
+11. Why must yellow lights be enabled before red/green transitions?
+12. What is the purpose of the blink mode?
+13. Why is blink mode given the highest priority?
+14. What happens to the FSM during reset?
+15. Why are outputs registered and not combinational?
+16. Can two green signals be ON at the same time?
+17. How is safety ensured in this design?
+18. Why is synchronous reset preferred for FSM behavior?
+19. What happens if reset is asserted during normal operation?
+20. Is this design suitable for real hardware implementation?
+
+---
+
+## **B) Interview-Style Questions (VLSI / Industry)**
+
+### **FSM & Architecture**
+
+1. Why is Moore FSM preferred over Mealy in traffic controllers?
+2. How would the design change if Mealy FSM was used?
+3. What is the latency between state transitions?
+4. How would you add pedestrian crossing signals?
+5. How would you prioritize emergency vehicles?
+6. How scalable is this design to N-way junctions?
+7. How would you parameterize timing values?
+8. How would you modify the FSM for adaptive traffic control?
+
+### **Timing & Simulation**
+
+9. Why can’t real-time seconds be simulated directly?
+10. How does time scaling affect simulation correctness?
+11. What risks occur if counters overflow?
+12. How do you ensure counters do not free-run?
+13. Why are timer enable signals required?
+
+### **Synthesis & Hardware**
+
+14. What hardware is inferred for counters?
+15. How many flip-flops are required approximately?
+16. What is the critical path in this design?
+17. How does this map to FPGA LUTs?
+18. Is clock gating possible here?
+
+### **Verification**
+
+19. How would you verify all FSM transitions?
+20. What corner cases exist?
+21. How would you verify blink mode thoroughly?
+22. How do you ensure no conflicting signals?
+23. How would you write assertions for safety?
+24. How would you create a self-checking testbench?
+
+---
+
+## **C) Debug Scenarios (Very Important)**
+
+### **Bug 1: Timer increments without enable**
+
+```verilog
+cnt2_reg <= cnt2_reg + 1; // ❌ Always increments
+```
+
+**Problem**
+
+* Timer runs continuously
+* FSM transitions too early
+
+**Fix**
+
+* Increment only when `start_timer_* = 1`
+
+---
+
+### **Bug 2: Missing reset of counters**
+
+**Problem**
+
+* FSM jumps unpredictably
+* Simulation mismatch
+
+**Fix**
+
+* Reset all counters on `reset_n = 0`
+
+---
+
+### **Bug 3: Outputs assigned combinationally**
+
+**Problem**
+
+* Glitches during transitions
+* Unsafe signal overlap
+
+**Fix**
+
+* Register all outputs inside FSM clocked block
+
+---
+
+### **Bug 4: Blink mode not prioritized**
+
+**Problem**
+
+* FSM ignores blink during active state
+
+**Fix**
+
+* Check `blink` condition first in every FSM state
+
+---
+
+### **Bug 5: Incorrect timer selection**
+
+**Problem**
+
+* Yellow or green duration incorrect
+
+**Fix**
+
+* Use correct `res_cnt*` flag per state
+
+---
+
+## **D) Design Variations**
+
+### **1. Adaptive Traffic Controller**
+
+* Replace fixed timers with sensor inputs
+* Adjust green duration dynamically
+
+### **2. Pedestrian-Aware Controller**
+
+* Add pedestrian request FSM
+* Interlock with vehicle signals
+
+### **3. Emergency Vehicle Priority**
+
+* Override FSM using high-priority input
+* Immediate green for selected path
+
+### **4. Parameterized Timing Controller**
+
+* Timing values as parameters
+* Same RTL reused for different cities
+
+---
+
+## **E) Conceptual Questions (Deep Understanding)**
+
+1. Why is traffic control inherently sequential?
+2. Why is deterministic timing critical for safety?
+3. How does FSM abstraction simplify complex control logic?
+4. Why are counters preferred over delays?
+5. How does this design reflect real embedded systems?
+
+---
+
+## **F) If This Were a Real-World System…**
+
+Additional considerations would include:
+
+✔ Clock domain safety
+✔ Power optimization
+✔ Fail-safe default states
+✔ Watchdog timers
+✔ Redundancy and fault tolerance
+✔ Formal verification and assertions
+✔ Certification-compliant design (IEC / ISO standards)
+
+---
+
+# **Part 6: Constraints**
 
 ```verilog
 create_clock -period 10.000 -name clk [get_ports clk]
@@ -1282,14 +1468,21 @@ set_property SLEW SLOW [get_ports SY]
 
 ```
 
+---
+
+# **Part 7: Schematics**
+
+## **RTL Schematic**
 <img width="1629" height="886" alt="image" src="https://github.com/user-attachments/assets/35dea201-6652-4ea3-8dc8-0e3e044b94fd" />
+
+## **Technology Schematic**
 <img width="1624" height="875" alt="image" src="https://github.com/user-attachments/assets/0087463a-fb16-47b1-9ecd-a9249db00d9b" />
 
+---
+
+# **Part 8: Project Summary**
 
 <img width="1649" height="880" alt="image" src="https://github.com/user-attachments/assets/0dc91711-9f05-4379-8010-11059ee83b7a" />
 <img width="1639" height="881" alt="image" src="https://github.com/user-attachments/assets/44d606e6-4c26-4836-8abd-d715feddf126" />
 
 <img width="825" height="188" alt="image" src="https://github.com/user-attachments/assets/af074603-bc42-4b28-abdb-33fbfd5086f7" />
-
-
-
