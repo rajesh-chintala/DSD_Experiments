@@ -1446,6 +1446,8 @@ Signals to observe in the waveform:
 
 <img width="1640" height="886" alt="image" src="https://github.com/user-attachments/assets/324c8836-9dbe-4a3a-8b54-afd203f9b2f2" />
 <img width="1643" height="878" alt="image" src="https://github.com/user-attachments/assets/9318f6de-77a3-4c1e-9fe6-5328f6a62da3" />
+<img width="1642" height="880" alt="image" src="https://github.com/user-attachments/assets/1b80bd1b-fb7d-417a-b568-eec4e85ddf6a" />
+
 
 # **PART 4: WAVEFORM & TIMING EXPLANATION**
 
