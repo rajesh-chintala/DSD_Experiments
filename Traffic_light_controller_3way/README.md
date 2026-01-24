@@ -108,9 +108,9 @@ It converts the high-frequency system clock into **human-perceivable time interv
 
 The controller operates with a **50 MHz system clock**, which corresponds to:
 
-[
+```math
 \text{Clock period} = 20,\text{ns}
-]
+```
 
 Traffic signals require durations in seconds.
 Therefore, a **0.1 s time base** is generated using a free-running counter.
@@ -124,9 +124,9 @@ Therefore, a **0.1 s time base** is generated using a free-running counter.
 
 This corresponds to:
 
-[
+```math
 4{,}999{,}999 \times 20,\text{ns} = 0.1,\text{s}
-]
+```
 
 Thus, the counter produces a **0.1 s timing tick**, which forms the fundamental time unit for the controller.
 
@@ -153,9 +153,9 @@ Each timer counts **0.1 s ticks**, not raw clock cycles.
 
 For each timer counter, a corresponding **next-value signal** (`cnt*_next`) computes:
 
-[
+```math
 \text{Next Count} = \text{Current Count} + 1
-]
+```
 
 These signals:
 
