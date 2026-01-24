@@ -629,3 +629,402 @@ Waveform inspection is sufficient due to deterministic behavior.
 <img width="1625" height="875" alt="image" src="https://github.com/user-attachments/assets/0c1f06ed-db2b-489e-b810-89d33a4af885" />
 
 <img width="1627" height="881" alt="image" src="https://github.com/user-attachments/assets/44aba7e3-5ae4-41ad-a67e-3d6085aa4290" />
+
+---
+
+# **PART 4: SIMULATION RESULTS & WAVEFORM ANALYSIS (12-Hour Digital Clock)**
+
+---
+
+## **4.1 Overview of Observed Simulation**
+
+The simulation waveform confirms **correct functional operation** of the 12-hour digital clock with respect to:
+
+* Second, minute, and hour counting
+* Proper rollover at time boundaries
+* Correct AM/PM (`am_pm`) toggling
+* Stable synchronous behavior
+* Correct reset initialization
+
+The behavior observed in the waveform matches the **expected real-time behavior**, scaled appropriately for simulation.
+
+---
+
+## **4.2 Clock and Reset Behavior**
+
+### **Clock (`clk`)**
+
+* Free-running periodic signal
+* Drives all internal counters and registers
+* Stable throughout the simulation window
+* All outputs update synchronously on clock edges
+
+### **Reset (`reset`)**
+
+* Active-high reset
+* When asserted:
+
+  * `hours` initializes to **12**
+  * `minutes` initializes to **0**
+  * `seconds` initializes to **0**
+  * `am_pm` initializes to **AM (0)**
+* After deassertion:
+
+  * Clock begins normal time progression
+
+This clean initialization is clearly visible at the start of the waveform.
+
+---
+
+## **4.3 Seconds Counter Behavior**
+
+### **Observed Behavior**
+
+* `seconds[5:0]` increments sequentially:
+
+  ```
+  55 → 56 → 57 → 58 → 59 → 00
+  ```
+* Increment occurs only on the internally generated **1-second tick**
+* No skipped or duplicated values
+
+### **Rollover**
+
+* At `seconds = 59`, the next increment:
+
+  * Resets seconds to `00`
+  * Triggers minute increment
+
+✔ **Seconds rollover logic is correct and deterministic**
+
+---
+
+## **4.4 Minutes Counter Behavior**
+
+### **Observed Behavior**
+
+* `minutes[5:0]` remains constant while seconds count
+* At `59 → 00` seconds transition:
+
+  ```
+  minutes: incremented, when  59 → 00
+  ```
+
+### **Cascaded Increment**
+
+* Minutes increment only when seconds roll over
+* No asynchronous or early increments
+
+✔ **Minute carry propagation is correct**
+
+---
+
+## **4.5 Hours Counter and 12-Hour Format**
+
+### **Critical Transition Observed**
+
+At the highlighted waveform cursor:
+
+```
+11 : 59 : 59  AM
+↓
+12 : 00 : 00  PM
+```
+
+### **Correct Behavior**
+
+* `hours` transitions:
+
+  ```
+  11 → 12
+  ```
+* `minutes` resets to `00`
+* `seconds` resets to `00`
+* `am_pm` toggles from `0 → 1`
+
+✔ **This confirms correct 11→12 AM/PM transition logic**
+
+---
+
+## **4.6 AM/PM (`am_pm`) Signal Behavior**
+
+### **Observed Behavior**
+
+* `am_pm = 1` after the 11→12 transition
+* Remains stable across subsequent second and minute increments
+* Does **not** toggle at:
+
+  * 12 → 1 transition
+  * Any other hour increment
+
+### **Design Rule Verified**
+
+AM/PM toggles **only once per 12-hour cycle**, at:
+
+```
+11:59:59 → 12:00:00
+```
+
+✔ **AM/PM logic is implemented correctly**
+
+---
+
+## **4.7 Synchronization and Timing Integrity**
+
+From the waveform:
+
+* All outputs change **only on clock edges**
+* No glitches on `hours`, `minutes`, `seconds`, or `am_pm`
+* No race conditions between counters
+* Clean, monotonic transitions
+
+This confirms:
+
+* Fully synchronous design
+* Proper ordering of cascaded counters
+* Absence of combinational hazards
+
+---
+
+## **4.8 Simulation Time Scaling Validation**
+
+### **Simulation Setup**
+
+* `ONE_SEC_COUNT` reduced for fast simulation
+* Clock period ≈ **0.1 ns**
+* Logical 1 second represented by a short simulation interval
+
+### **Observed Result**
+
+* Time behavior matches **real clock semantics**
+* Only the **speed** is scaled, not the **logic**
+
+✔ **Simulation faithfully represents real hardware behavior**
+
+---
+
+## **4.9 Summary of Waveform Validation**
+
+✔ Correct reset initialization
+✔ Accurate second counting
+✔ Proper minute rollover
+✔ Correct 12-hour hour transitions
+✔ AM/PM toggles at correct boundary
+✔ Glitch-free synchronous behavior
+✔ Simulation scaling works as intended
+
+---
+
+# **PART 5: VIVA QUESTIONS, INTERVIEW QUESTIONS, DEBUG SCENARIOS & DESIGN VARIATIONS**
+
+---
+
+## **A) Viva Questions (University / Lab-Oriented)**
+
+1. What is the difference between a 24-hour clock and a 12-hour clock?
+2. Why is an AM/PM indicator required in a 12-hour digital clock?
+3. What is the role of the seconds counter in this design?
+4. How are seconds, minutes, and hours related in this clock?
+5. Why are minutes and seconds represented using 6 bits?
+6. Why are hours represented using 4 or 5 bits?
+7. When does the AM/PM signal toggle?
+8. Why does AM/PM not toggle at every hour change?
+9. What happens at the transition from 11:59:59 to 12:00:00?
+10. What happens at the transition from 12:59:59 to 1:00:00?
+11. Why is a reset signal necessary in a clock design?
+12. What values are loaded into the clock on reset?
+13. Is this design synchronous or asynchronous?
+14. Why is the design implemented using counters instead of an FSM?
+15. Can this clock work without a clock signal?
+16. What happens if reset is asserted during normal operation?
+17. Why is simulation time scaling required?
+18. Does time scaling affect hardware behavior?
+19. What is the maximum hour value in this design?
+20. How is rollover handled in the hour counter?
+
+---
+
+## **B) Interview-Style Questions (VLSI / Industry)**
+
+### **Architecture & Design**
+
+1. Why did you choose cascaded counters instead of an FSM?
+2. How would you modify this design to support both 12-hour and 24-hour modes?
+3. How would you add a time-set feature (manual hour/minute adjustment)?
+4. How would you implement alarm functionality?
+5. How would you synchronize an external time-set input?
+6. How would you add clock-enable support?
+7. Can this design be parameterized for different clock frequencies?
+8. How would you reduce power consumption in this clock?
+
+### **Timing & Reliability**
+
+9. What happens if the 1-second tick is inaccurate?
+10. How would clock jitter affect this design?
+11. What is the critical path in this design?
+12. How would you verify long-term correctness (24+ hours)?
+13. How would you test rollover corner cases?
+
+### **Synthesis & Hardware**
+
+14. How many flip-flops are required for this design?
+15. What combinational logic is inferred?
+16. How does this design map to FPGA resources?
+17. Can this design run at very high clock frequencies?
+18. What changes are required to run this on real hardware with a 50 MHz clock?
+
+---
+
+## **C) Debug Scenarios (Very Important)**
+
+### **Bug 1: AM/PM Toggles at Wrong Time**
+
+* AM/PM toggles at 12 → 1 instead of 11 → 12
+
+### **Bug 2: Hours Reset to 0 Instead of 12**
+
+* Clock shows 0:00 AM after reset
+
+### **Bug 3: Hours Increment at 59 Minutes Instead of 60**
+
+* Off-by-one error in minute rollover logic
+
+### **Bug 4: Seconds Skip Values**
+
+* Incorrect 1-second tick generation
+
+### **Bug 5: Multiple AM/PM Toggles**
+
+* AM/PM toggles more than once per 12-hour cycle
+
+### **Bug 6: Glitches on Output Signals**
+
+* Hours or minutes briefly show invalid values
+
+### **Bug 7: Reset Causes Metastability**
+
+* Reset not synchronized to clock
+
+---
+
+## **D) Design Variations**
+
+### **24-Hour / 12-Hour Selectable Clock**
+
+* Mode input selects display format
+* AM/PM disabled in 24-hour mode
+
+### **Time-Setting Mode**
+
+* Add `set_hr`, `set_min`, `set_sec` inputs
+* Freeze normal counting during adjustment
+
+### **Alarm Clock Extension**
+
+* Compare current time with stored alarm time
+* Trigger alarm output
+
+### **Clock Enable / Pause Mode**
+
+* Stop time progression without resetting values
+
+### **BCD Output Clock**
+
+* Convert binary counters to BCD for display devices
+
+---
+
+## **E) Conceptual Questions (Deep Understanding)**
+
+1. Why are clocks naturally modeled using counters?
+2. What advantages does synchronous design provide here?
+3. Why is AM/PM logic separate from hour counting?
+4. How does cascading simplify design reasoning?
+5. What are the risks of mixing combinational and sequential time logic?
+6. How would metastability affect time correctness?
+
+---
+
+## **F) If This Were Used in a Real Product…**
+
+You would also consider:
+
+* ✔ Clock accuracy and calibration
+* ✔ Battery backup for time retention
+* ✔ Power-fail detection
+* ✔ RTC crystal integration
+* ✔ CDC for external inputs
+* ✔ Low-power sleep modes
+* ✔ Formal verification of rollover logic
+
+---
+
+# **Part 6: Constraints**
+
+```verilog
+create_clock -period 10 -name clk [get_ports clk]
+
+set_property PACKAGE_PIN E3 [get_ports clk]
+set_property PACKAGE_PIN J15 [get_ports reset]
+set_property PACKAGE_PIN V11 [get_ports {hours[3]}]
+set_property PACKAGE_PIN V12 [get_ports {hours[2]}]
+set_property PACKAGE_PIN V14 [get_ports {hours[1]}]
+set_property PACKAGE_PIN V15 [get_ports {hours[0]}]
+set_property PACKAGE_PIN T16 [get_ports {minutes[5]}]
+set_property PACKAGE_PIN U14 [get_ports {minutes[4]}]
+set_property PACKAGE_PIN T15 [get_ports {minutes[3]}]
+set_property PACKAGE_PIN U16 [get_ports {minutes[1]}]
+set_property PACKAGE_PIN V16 [get_ports {minutes[2]}]
+set_property PACKAGE_PIN U17 [get_ports {minutes[0]}]
+set_property PACKAGE_PIN V17 [get_ports {seconds[5]}]
+set_property PACKAGE_PIN R18 [get_ports {seconds[4]}]
+set_property PACKAGE_PIN N14 [get_ports {seconds[3]}]
+set_property PACKAGE_PIN J13 [get_ports {seconds[2]}]
+set_property PACKAGE_PIN K15 [get_ports {seconds[1]}]
+set_property PACKAGE_PIN H17 [get_ports {seconds[0]}]
+set_property PACKAGE_PIN N16 [get_ports am_pm]
+set_property IOSTANDARD LVCMOS33 [get_ports am_pm]
+set_property IOSTANDARD LVCMOS33 [get_ports clk]
+set_property IOSTANDARD LVCMOS33 [get_ports reset]
+set_property IOSTANDARD LVCMOS33 [get_ports {hours[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {hours[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {hours[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {hours[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[0]}]
+```
+
+---
+
+# **Part 7: Schematic**
+
+---
+
+## **RTL Schematic**
+<img width="1626" height="876" alt="image" src="https://github.com/user-attachments/assets/c917f277-9128-4095-92ba-b0babd0c9db2" />
+<img width="1625" height="876" alt="image" src="https://github.com/user-attachments/assets/68d38dbc-a869-436c-92e7-80c3a1b8a181" />
+
+## **Technology Schematic**
+<img width="1626" height="878" alt="image" src="https://github.com/user-attachments/assets/d2f3fe49-49cc-4471-b58b-0ec867488d19" />
+<img width="1626" height="884" alt="image" src="https://github.com/user-attachments/assets/299ce8e0-9735-4607-b81b-9ec830135baf" />
+<img width="1631" height="884" alt="image" src="https://github.com/user-attachments/assets/618993fc-cdd7-4a81-acd8-f718eb61b128" />
+
+---
+
+# **Part 8: Project Summary**
+
+---
+
+<img width="1624" height="880" alt="image" src="https://github.com/user-attachments/assets/bd660bbd-5bab-4f03-a9ca-3ccd3e10e856" />
+<img width="1623" height="884" alt="image" src="https://github.com/user-attachments/assets/1f8ed06a-e8bc-41fd-ac92-323b6ee0b999" />
+<img width="827" height="170" alt="image" src="https://github.com/user-attachments/assets/26862ce7-de31-45a4-988f-5a272312e27c" />
