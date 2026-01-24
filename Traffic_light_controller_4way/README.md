@@ -134,9 +134,9 @@ A **22-bit counter** (`cnt1_reg[21:0]`) is used to divide the 50 MHz clock:
 
 This count corresponds to:
 
-[
+```math
 4{,}999{,}999 \times 20,\text{ns} = 0.1,\text{s}
-]
+```
 
 Thus, the counter produces a **periodic 0.1 s timing tick**, which serves as the **fundamental time unit** for the entire system.
 
@@ -386,6 +386,13 @@ When `blink` is deasserted, the FSM exits blink mode and resumes normal operatio
 ---
 
 ## **9. FSM State Definitions**
+
+<img width="475" height="791" alt="image" src="https://github.com/user-attachments/assets/478a1b78-c769-46bf-af1a-6926d3a460b8" />
+
+<img width="513" height="781" alt="image" src="https://github.com/user-attachments/assets/b876c9d7-ebeb-4731-979f-3f740a1ee935" />
+
+<img width="292" height="311" alt="image" src="https://github.com/user-attachments/assets/ae7c1940-0cac-4b49-a6a9-9ef5654a32df" />
+
 
 The FSM consists of **13 states**:
 
