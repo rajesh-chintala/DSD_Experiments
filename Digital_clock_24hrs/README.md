@@ -105,9 +105,9 @@ In real hardware:
 * Clock period = **20 ns**
 * A divider generates **1 Hz** (1 second tick)
 
-```math
+$$
 50{,}000{,}000 \text{ cycles} = 1 \text{ second}
-```
+$$
 
 This 1-second pulse drives all time updates.
 
@@ -809,7 +809,211 @@ This confirms:
 
 ---
 
-# **Part 7: Constraints**
+# **PART 5: VIVA QUESTIONS, INTERVIEW QUESTIONS, DEBUG SCENARIOS & DESIGN VARIATIONS**
+
+---
+
+## **A) Viva Questions (University / Lab-Oriented)**
+
+1. What is a digital clock?
+2. Why is a counter-based design suitable for a digital clock?
+3. Why are seconds, minutes, and hours implemented as separate counters?
+4. Why do seconds and minutes require 6-bit counters?
+5. Why does the hour counter use only 5 bits?
+6. What is meant by a 24-hour format?
+7. How does the clock reset behave?
+8. Why is synchronous reset preferred here?
+9. How is rollover implemented for seconds?
+10. How is minute incrementation triggered?
+11. How does the hour counter know when to increment?
+12. What happens when the clock reaches 23:59:59?
+13. Why is parameterization used for the 1-second counter?
+14. Why is the design fully synchronous?
+15. What is the role of the base counter?
+16. Why is this design synthesizable?
+17. Can this design work without a clock?
+18. What determines the accuracy of the clock?
+19. How would you display this clock on a 7-segment display?
+20. What changes are needed to support AM/PM?
+
+---
+
+## **B) Interview-Style Questions (VLSI / Industry)**
+
+### **Architecture & Design**
+
+1. Why did you choose cascading counters instead of an FSM?
+2. Could this design be implemented using an FSM instead?
+3. What are the trade-offs between FSM-based and counter-based clocks?
+4. How would you make this design low-power?
+5. How would you add clock enable functionality?
+6. How would you pause and resume the clock?
+7. How would you synchronize an external reset signal?
+8. How would you implement time adjustment (set hours/minutes)?
+
+---
+
+### **Timing & Simulation**
+
+9. Why is time scaling required in simulation?
+10. What happens if the clock period is changed?
+11. How does parameter `ONE_SEC_COUNT` help verification?
+12. Why do outputs change only on clock edges?
+13. How would you verify long-term correctness without long simulations?
+
+---
+
+### **Synthesis & Hardware**
+
+14. How many flip-flops are required in this design?
+15. What combinational logic is inferred?
+16. What is the critical path?
+17. How does this map to FPGA LUTs?
+18. How would you constrain this design in an SDC file?
+
+---
+
+### **Verification**
+
+19. How would you verify rollover conditions?
+20. How would you detect incorrect carry propagation?
+21. How would you verify reset robustness?
+22. How would you build a self-checking testbench?
+23. What assertions would you add?
+24. How would you verify this design in hardware?
+
+---
+
+## **C) Debug Scenarios (Very Important)**
+
+### **Bug 1: Missing Rollover Condition**
+
+```verilog
+if (seconds == 59)
+    seconds <= seconds + 1;   // ❌ Wrong
+```
+
+**Issue:**
+
+* Seconds overflow beyond 59
+
+---
+
+### **Bug 2: Improper Carry Handling**
+
+```verilog
+if (seconds == 59)
+    minutes <= minutes + 1;
+```
+
+**Issue:**
+
+* Minutes increment multiple times if seconds remain at 59
+
+---
+
+### **Bug 3: Asynchronous Counter Updates**
+
+```verilog
+always @(*) begin
+    seconds = seconds + 1;
+end
+```
+
+**Issue:**
+
+* Combinational loops
+* Non-synthesizable logic
+
+---
+
+### **Bug 4: Reset Not Applied to All Counters**
+
+**Issue:**
+
+* Hours reset but minutes retain old value
+* Incorrect startup time
+
+---
+
+### **Bug 5: Blocking Assignments in Sequential Logic**
+
+```verilog
+seconds = seconds + 1;  // ❌ Wrong
+```
+
+**Issue:**
+
+* Simulation vs synthesis mismatch
+
+---
+
+## **D) Design Variations**
+
+### **12-Hour Digital Clock**
+
+* Hours range: 1–12
+* AM/PM indicator added
+* Special rollover handling for 12 → 1
+
+---
+
+### **Clock with Time-Set Mode**
+
+* Manual increment buttons
+* Priority over normal counting
+
+---
+
+### **Low-Power Clock**
+
+* Clock gating for counters
+* Reduced switching activity
+
+---
+
+### **Real-Time Clock (RTC) Integration**
+
+* External crystal oscillator
+* Battery backup
+
+---
+
+### **Alarm Clock**
+
+* Alarm time registers
+* Comparator logic
+* Interrupt output
+
+---
+
+## **E) Conceptual Questions (Deep Understanding)**
+
+1. Why are counters preferred over FSMs for timekeeping?
+2. Why does hierarchical counting simplify the design?
+3. How does time accuracy depend on clock stability?
+4. What happens if the clock drifts?
+5. How would you synchronize this with real-world time?
+6. Why is determinism important in timekeeping systems?
+
+---
+
+## **F) If This Were in a Real Chip…**
+
+You would also consider:
+
+✔ Clock accuracy and drift
+✔ Temperature-induced variation
+✔ Clock domain crossing (CDC)
+✔ Power-on reset behavior
+✔ Battery-backed registers
+✔ Long-term reliability
+✔ Formal verification
+✔ Assertion-based checks
+
+---
+
+# **Part 6: Constraints**
 
 ```verilog
 create_clock -period 10 -name clk [get_ports clk]
@@ -888,12 +1092,24 @@ set_property SLEW SLOW [get_ports {seconds[1]}]
 set_property SLEW SLOW [get_ports {seconds[0]}]
 ```
 
+---
+
+# **Part 7: Schematic**
+
+---
+
+## **RTL Schematic**
 <img width="1640" height="884" alt="image" src="https://github.com/user-attachments/assets/718a6b27-e53f-4bb8-9ced-82055bff4cd8" />
 
+---
+
+## **Technology Schematic**
 <img width="1641" height="876" alt="image" src="https://github.com/user-attachments/assets/c0730e9b-4a5f-4161-a736-ea8d00879be4" />
+
+---
+
+# **Part 8: Project Summary**
 
 <img width="1641" height="876" alt="image" src="https://github.com/user-attachments/assets/1c4603be-55db-4d5b-93e3-8c7cf42123d8" />
 <img width="1641" height="876" alt="image" src="https://github.com/user-attachments/assets/81b6b152-0798-46c6-be07-bcf09c85b765" />
 <img width="816" height="171" alt="image" src="https://github.com/user-attachments/assets/ca455842-60d2-48e8-b7f0-d0e79fd43813" />
-
-
