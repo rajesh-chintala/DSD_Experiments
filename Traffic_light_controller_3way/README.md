@@ -1231,4 +1231,27 @@ The simulation waveform fully validates the **functional correctness, timing acc
 
 ---
 
+# Constraints
+
+```verilog
+create_clock -period 10 -name clk [get_port clk]
+
+set_property PACKAGE_PIN V11 [get_ports MG1]
+set_property PACKAGE_PIN V12 [get_ports MG2]
+set_property PACKAGE_PIN V14 [get_ports MR1]
+set_property PACKAGE_PIN V15 [get_ports MR2]
+set_property PACKAGE_PIN T16 [get_ports MY1]
+set_property PACKAGE_PIN U14 [get_ports MY2]
+set_property PACKAGE_PIN T15 [get_ports SG]
+set_property PACKAGE_PIN V16 [get_ports SR]
+set_property PACKAGE_PIN U16 [get_ports SY]
+set_property PACKAGE_PIN V10 [get_ports blink]
+set_property PACKAGE_PIN E3 [get_ports clk]
+set_property PACKAGE_PIN J15 [get_ports reset_n]
+```
+
+<img width="1629" height="886" alt="image" src="https://github.com/user-attachments/assets/35dea201-6652-4ea3-8dc8-0e3e044b94fd" />
+<img width="1624" height="875" alt="image" src="https://github.com/user-attachments/assets/0087463a-fb16-47b1-9ecd-a9249db00d9b" />
+
+
 
