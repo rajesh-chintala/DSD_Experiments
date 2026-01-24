@@ -622,6 +622,193 @@ Correct operation is confirmed if:
 <img width="1641" height="879" alt="image" src="https://github.com/user-attachments/assets/88c7a27d-38d5-44af-9660-e19ca00bc5dc" />
 <img width="1642" height="881" alt="image" src="https://github.com/user-attachments/assets/0e68b4ef-b8e5-4efb-8312-7123c6fe0520" />
 
+---
+
+# **PART 4: SIMULATION RESULTS AND WAVEFORM ANALYSIS (24-Hour Digital Clock)**
+
+---
+
+## **4.1 Overview of Observed Simulation**
+
+The simulation waveform confirms the **correct functional operation** of the 24-hour digital clock under:
+
+* Normal counting operation
+* Proper seconds → minutes → hours rollover
+* Correct reset behavior
+* Accurate time scaling for simulation
+
+The observed behavior matches the **intended real-time clock functionality**, with time compressed for simulation efficiency.
+
+---
+
+## **4.2 Clock and Reset Behavior**
+
+### **Clock (clk)**
+
+* Free-running periodic signal
+* Generated with a **0.1 ns clock period** (fast simulation clock)
+* Drives all counters synchronously
+* Stable and uniform throughout the simulation
+
+This clock acts as the **scaled equivalent** of the real 50 MHz hardware clock.
+
+---
+
+### **Reset (reset)**
+
+* Active-high reset signal
+* When `reset = 1`:
+
+  * `hours = 0`
+  * `minutes = 0`
+  * `seconds = 0`
+* When `reset` is deasserted:
+
+  * Clock begins normal time counting
+
+This behavior is clearly visible at the start of the waveform.
+
+---
+
+## **4.3 Seconds Counter Behavior**
+
+### **Seconds (`seconds[5:0]`)**
+
+From the waveform:
+
+* Seconds increment **sequentially every simulated second**
+* Values observed:
+
+  ```
+  48 → 49 → 50 → … → 58 → 59 → 0 → 1 → 2
+  ```
+* When `seconds` reaches **59**:
+
+  * It resets to **0**
+  * A carry is generated to increment `minutes`
+
+This confirms:
+
+* Proper **mod-60 counting**
+* Correct carry generation
+
+---
+
+## **4.4 Minutes Counter Behavior**
+
+### **Minutes (`minutes[5:0]`)**
+
+From the waveform:
+
+* Minutes remain stable while seconds count
+* When seconds roll over from **59 → 0**:
+
+  * Minutes increment by **1**
+* When minutes reach **59**:
+
+  * They reset to **0**
+  * A carry is generated to increment `hours`
+
+This verifies correct **seconds-to-minutes coupling**.
+
+---
+
+## **4.5 Hours Counter Behavior (24-Hour Format)**
+
+### **Hours (`hours[4:0]`)**
+
+Observed behavior:
+
+* Hours increment only when:
+
+  ```
+  minutes = 59 AND seconds = 59
+  ```
+* Valid hour range:
+
+  ```
+  0 → 1 → … → 22 → 23 → 0
+  ```
+* In the waveform:
+
+  * Hours show a valid value (e.g., **23**)
+  * Roll over cleanly to **0**
+
+This confirms correct **24-hour wrap-around logic**.
+
+---
+
+## **4.6 Cascaded Counter Synchronization**
+
+The waveform clearly demonstrates **hierarchical time counting**:
+
+```
+seconds → minutes → hours
+```
+
+Key observations:
+
+* No skipped values
+* No double increments
+* No race conditions
+* All updates occur **synchronously on clock edges**
+
+This validates the correctness of the **carry-propagation design**.
+
+---
+
+## **4.7 Time Scaling Validation**
+
+The simulation uses **time compression**:
+
+| Real Time  | Simulation Time |
+| ---------- | --------------- |
+| 1 second   | 1 ns            |
+| 60 seconds | 60 ns           |
+| 1 hour     | 3600 ns         |
+
+From the waveform:
+
+* One visible second increment occurs every **1 ns**
+* Full minute transition observed at **60 ns**
+* Behavior matches the scaled expectations exactly
+
+⚠️ This scaling:
+
+* Affects **only simulation**
+* Does **not change hardware logic**
+
+---
+
+## **4.8 Absence of Errors and Glitches**
+
+From the waveform:
+
+* No glitches on `hours`, `minutes`, or `seconds`
+* No overlapping or undefined values
+* No metastability or partial updates
+* All signals change synchronously
+
+This confirms:
+
+* Fully synchronous design
+* Clean RTL implementation
+* Synthesizable behavior
+
+---
+
+## **4.9 Summary of Waveform Validation**
+
+✔ Correct reset initialization
+✔ Accurate second counting
+✔ Proper minute rollover
+✔ Correct 24-hour wrap-around
+✔ Clean hierarchical carry propagation
+✔ Correct simulation time scaling
+✔ Stable and glitch-free outputs
+
+---
+
 # **Part 7: Constraints**
 
 ```verilog
