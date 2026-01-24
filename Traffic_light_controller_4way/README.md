@@ -208,18 +208,116 @@ These flags form the **primary interface between the datapath and control path**
 
 ## **7. Control Path Architecture**
 
-The **control path** is implemented entirely by the FSM.
+The control path of the four-way traffic light controller is implemented entirely using a **finite state machine (FSM)**.
+It governs the sequencing of traffic signals by enabling timers, monitoring their completion, and determining the next state of operation.
 
-### Control Path Responsibilities:
+---
 
-* Enable specific timers (`start_timer_*`)
-* Monitor timer completion flags
-* Decide next FSM state
-* Override normal operation during blink mode
+### **7.1 Control Path Responsibilities**
 
-### Priority Rule:
+The control path performs the following functions:
 
-> **Blink mode has the highest priority and can interrupt any state.**
+* Enables the appropriate timer for each traffic phase
+* Monitors timer completion conditions
+* Controls FSM state transitions
+* Overrides normal traffic operation during blink mode
+
+The control path ensures that **all state transitions are time-driven and deterministic**.
+
+---
+
+### **7.2 Timer Enable Signals**
+
+Each traffic phase is associated with a specific timer, enabled by the FSM through control signals:
+
+| Control Signal  | Purpose                                   |
+| --------------- | ----------------------------------------- |
+| `start_timer_1` | Enables main road straight traffic timing |
+| `start_timer_2` | Enables yellow phase timing               |
+| `start_timer_3` | Enables side road / left-turn timing      |
+
+A timer advances **only when its corresponding start signal is asserted**.
+
+---
+
+### **7.3 Timer Advance Condition (Logical Expression)**
+
+A timer advances when **both** of the following conditions are satisfied:
+
+1. The FSM asserts the timer start signal
+2. The base time counter reaches the 0.1 s time base
+
+This condition is expressed logically as:
+
+> **Timer Advance Condition**
+>
+> **start_timer_* = 1 AND (cnt1_reg = time_base)**
+
+Where:
+
+* `start_timer_*` represents the timer enable signal asserted by the FSM
+* `cnt1_reg` is the free-running base counter
+* `time_base` corresponds to one base time interval (0.1 s)
+
+Only when this condition is true does the associated timer counter increment.
+
+---
+
+### **7.4 Timer Completion Condition**
+
+A timer is considered complete when:
+
+> **(cnt1_reg = time_base) AND (timer_count = terminal_value)**
+
+This condition generates a **timer completion flag** (`res_cnt*`), which is used by the FSM to decide whether to transition to the next state.
+
+---
+
+### **7.5 Timer Completion Flags**
+
+Each timer produces a completion signal monitored by the FSM:
+
+| Completion Signal | Meaning                               |
+| ----------------- | ------------------------------------- |
+| `res_cnt2`        | Main road straight phase completed    |
+| `res_cnt3`        | Yellow phase completed                |
+| `res_cnt4`        | Side road / left-turn phase completed |
+| `res_cnt5`        | Blink interval completed              |
+
+These signals act as **decision inputs** to the FSM.
+
+---
+
+### **7.6 FSM State Transition Control**
+
+At every clock edge, the FSM evaluates:
+
+* The current state
+* The relevant timer completion flag
+* The `blink` input
+
+If the required timer has completed, the FSM transitions to the next state.
+If not, it remains in the current state.
+
+Thus, **time governs state progression**, not external traffic inputs.
+
+---
+
+### **7.7 Blink Mode Priority Rule**
+
+Blink mode has the **highest priority** in the control path.
+
+This rule can be stated as:
+
+> **If `blink = 1`, the FSM immediately transitions to the blink state, regardless of the current state.**
+
+While in blink mode:
+
+* Normal traffic timers are disabled
+* Only the blink timer is active
+* All traffic sequencing is suspended
+
+When `blink` is deasserted, the FSM exits blink mode and resumes normal operation from the initial state.
 
 ---
 
@@ -1668,10 +1766,103 @@ You would additionally consider:
 ✔ Fault tolerance and watchdog timers
 
 ---
+# **Part 6: Constraints**
 
-# **Part 6: Schematics**
+```verilog
+create_clock -period 10 -name clk [get_ports clk]
+
+set_property PACKAGE_PIN V11 [get_ports MG1]
+set_property PACKAGE_PIN V12 [get_ports MG2]
+set_property PACKAGE_PIN V14 [get_ports MLT1]
+set_property PACKAGE_PIN V15 [get_ports MLT2]
+set_property PACKAGE_PIN T16 [get_ports MR1]
+set_property PACKAGE_PIN U14 [get_ports MR2]
+set_property PACKAGE_PIN T15 [get_ports MY1]
+set_property PACKAGE_PIN V16 [get_ports MY2]
+set_property PACKAGE_PIN U17 [get_ports SG1]
+set_property PACKAGE_PIN V17 [get_ports SG2]
+set_property PACKAGE_PIN R18 [get_ports SLT1]
+set_property PACKAGE_PIN N14 [get_ports SLT2]
+set_property PACKAGE_PIN J13 [get_ports SR1]
+set_property PACKAGE_PIN K15 [get_ports SR2]
+set_property PACKAGE_PIN H17 [get_ports SY1]
+set_property PACKAGE_PIN E3 [get_ports clk]
+set_property PACKAGE_PIN J15 [get_ports reset_n]
+set_property PACKAGE_PIN V10 [get_ports blink]
+set_property PACKAGE_PIN N16 [get_ports SY2]
+set_property IOSTANDARD LVCMOS33 [get_ports MG1]
+set_property IOSTANDARD LVCMOS33 [get_ports MG2]
+set_property IOSTANDARD LVCMOS33 [get_ports MLT1]
+set_property IOSTANDARD LVCMOS33 [get_ports MLT2]
+set_property IOSTANDARD LVCMOS33 [get_ports MR1]
+set_property IOSTANDARD LVCMOS33 [get_ports MR2]
+set_property IOSTANDARD LVCMOS33 [get_ports MY1]
+set_property IOSTANDARD LVCMOS33 [get_ports SG1]
+set_property IOSTANDARD LVCMOS33 [get_ports SG2]
+set_property IOSTANDARD LVCMOS33 [get_ports SLT1]
+set_property IOSTANDARD LVCMOS33 [get_ports SLT2]
+set_property IOSTANDARD LVCMOS33 [get_ports SR1]
+set_property IOSTANDARD LVCMOS33 [get_ports SR2]
+set_property IOSTANDARD LVCMOS33 [get_ports SY1]
+set_property IOSTANDARD LVCMOS33 [get_ports SY2]
+set_property IOSTANDARD LVCMOS33 [get_ports blink]
+set_property IOSTANDARD LVCMOS33 [get_ports clk]
+set_property IOSTANDARD LVCMOS33 [get_ports reset_n]
+set_property DRIVE 12 [get_ports MG1]
+set_property DRIVE 12 [get_ports MG2]
+set_property DRIVE 12 [get_ports MLT1]
+set_property DRIVE 12 [get_ports MLT2]
+set_property DRIVE 12 [get_ports MR1]
+set_property DRIVE 12 [get_ports MR2]
+set_property DRIVE 12 [get_ports MY1]
+set_property DRIVE 12 [get_ports MY2]
+set_property DRIVE 12 [get_ports SG1]
+set_property DRIVE 12 [get_ports SG2]
+set_property DRIVE 12 [get_ports SLT1]
+set_property DRIVE 12 [get_ports SLT2]
+set_property DRIVE 12 [get_ports SR1]
+set_property DRIVE 12 [get_ports SR2]
+set_property DRIVE 12 [get_ports SY1]
+set_property DRIVE 12 [get_ports SY2]
+set_property SLEW SLOW [get_ports MG1]
+set_property SLEW SLOW [get_ports MG2]
+set_property SLEW SLOW [get_ports MLT1]
+set_property SLEW SLOW [get_ports MLT2]
+set_property SLEW SLOW [get_ports MR1]
+set_property SLEW SLOW [get_ports MR2]
+set_property SLEW SLOW [get_ports MY1]
+set_property SLEW SLOW [get_ports MY2]
+set_property SLEW SLOW [get_ports SG1]
+set_property SLEW SLOW [get_ports SG2]
+set_property SLEW SLOW [get_ports SLT1]
+set_property SLEW SLOW [get_ports SLT2]
+set_property SLEW SLOW [get_ports SR1]
+set_property SLEW SLOW [get_ports SR2]
+set_property SLEW SLOW [get_ports SY1]
+set_property SLEW SLOW [get_ports SY2]
+set_property IOSTANDARD LVCMOS33 [get_ports MY2]
+
+```
+
+---
+
+# **Part 7: Schematics**
 
 ---
 
 ## **RTL Schematic**
 <img width="1920" height="1038" alt="image" src="https://github.com/user-attachments/assets/6f004f7e-4977-4017-895c-8b7c7a35dc43" />
+
+---
+
+## **Technology Schematic**
+<img width="1920" height="1034" alt="image" src="https://github.com/user-attachments/assets/b58baedf-d246-4412-8eed-81f0c10f4861" />
+
+
+
+---
+
+# **Part 8: PRoject Summary**
+
+
+---
