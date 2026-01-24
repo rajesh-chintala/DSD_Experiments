@@ -65,6 +65,7 @@ The FSM forms the **control core** of the traffic controller.
 ## **4. Description of the Four-Way Traffic Scenario**
 
 The intersection consists of:
+<img width="544" height="260" alt="image" src="https://github.com/user-attachments/assets/aa1bb7cb-1a2b-4b1b-bdc6-db65902f077d" />
 
 ### Main Roads
 
