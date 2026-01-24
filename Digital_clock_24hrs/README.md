@@ -396,5 +396,317 @@ endmodule
 
 ---
 
+# **PART 3: TESTBENCH & VERIFICATION (24-Hour Digital Clock)**
+
+---
+
+## **3.1 Purpose of the Testbench**
+
+The purpose of this testbench is to **verify the functional correctness** of the 24-hour digital clock by validating:
+
+* Correct generation of the 1-second time tick
+* Proper incrementing of seconds, minutes, and hours
+* Correct rollover behavior:
+
+  * `59 → 00` for seconds
+  * `59 → 00` for minutes
+  * `23 → 00` for hours
+* Proper reset initialization to `00:00:00`
+
+---
+
+## **3.2 Verification Objectives**
+
+The testbench aims to ensure that:
+
+* Time progresses accurately once every second
+* Cascaded counter rollovers occur correctly
+* No invalid time values are produced
+* Reset brings the clock to a known safe state
+* The design remains stable over long simulation runs
+
+---
+
+## **3.3 Verification Strategy**
+
+A **directed, time-scaled verification approach** is used:
+
+* Generate a free-running clock
+* Apply reset at the beginning of simulation
+* Use a **reduced second counter value** for simulation efficiency
+* Allow the clock to run through multiple rollovers
+* Observe output waveforms for correctness
+
+This strategy validates both **short-term behavior** (seconds/minutes) and **long-term behavior** (hours rollover).
+
+---
+
+## **3.4 Simulation Time Scaling and Time-Base Mapping**
+
+In real hardware, the digital clock operates using a **50 MHz system clock**, where:
+
+* Clock period = **20 ns**
+* 1 second = **50,000,000 clock cycles**
+
+Simulating this directly would be impractical. Therefore, **time scaling** is applied **only for simulation**, without altering functional behavior.
+
+---
+
+### **Simulation Time Scaling Technique Used**
+
+The simulation uses a **compressed time model**:
+
+| Parameter          | Real Hardware | Simulation          |
+| ------------------ | ------------- | ------------------- |
+| Timescale          | Physical time | `1ns / 1ps`         |
+| Clock half-period  | 10 ns         | **0.05 ns (50 ps)** |
+| Clock period       | 20 ns         | **0.1 ns**          |
+| ONE_SEC_COUNT      | 50,000,000    | **10**              |
+| Effective 1 second | 1 s           | **1 ns**            |
+
+---
+
+### **Interpretation**
+
+* Every **0.1 ns clock period** represents a scaled-down hardware clock
+* `ONE_SEC_COUNT = 10` causes a **1-second tick every 1 ns**
+* This means:
+
+  * **1 ns (simulation) ≡ 1 second (real time)**
+
+---
+
+### **Important Note**
+
+⚠️ This scaling:
+
+* Affects **only simulation speed**
+* Does **not** change counter logic, rollover behavior, or FSM correctness
+* Produces **functionally equivalent results** to real hardware
+
+Thus, the design remains **hardware-accurate**, while simulation becomes **resource-efficient**.
+
+---
+
+## **3.5 Complete Testbench Code**
+
+```verilog
+`timescale 1ns / 1ps
+/*---------------------------------------------------------
+  Testbench for 24-Hour Digital Clock
+---------------------------------------------------------*/
+
+module tb_digital_clock_24hr;
+
+    /*---------------- Testbench Signals ----------------*/
+    reg clk;
+    reg reset;
+
+    wire [4:0] hours;
+    wire [5:0] minutes;
+    wire [5:0] seconds;
+
+    /*--------------------------------------------------
+      DUT Instantiation
+      ONE_SEC_COUNT reduced for simulation
+    --------------------------------------------------*/
+    digital_clock_24hr #(
+        .ONE_SEC_COUNT(10)   // Fast simulation
+    ) dut (
+        .clk     (clk),
+        .reset   (reset),
+        .hours   (hours),
+        .minutes (minutes),
+        .seconds (seconds)
+    );
+
+    /*--------------------------------------------------
+      Clock Generation (10 ns period)
+    --------------------------------------------------*/
+    always #0.05 clk = ~clk;
+
+    /*--------------------------------------------------
+      Test Sequence
+    --------------------------------------------------*/
+    initial begin
+        /* Initialize signals */
+        clk   = 1'b0;
+        reset = 1'b1;
+
+        /* Apply reset */
+        #2.1;
+        reset = 1'b0;
+
+        /* Let clock run */
+        #2000;
+
+        /* End simulation */
+        $stop;
+    end
+
+endmodule
+```
+
+---
+
+## **3.6 Applied Inputs**
+
+### **Reset Phase**
+
+* `reset = 1`
+* Clock active
+
+### **Normal Operation**
+
+* `reset = 0`
+* Clock runs continuously
+* Time increments automatically
+
+---
+
+## **3.7 Expected Outputs**
+
+### **Immediately After Reset**
+
+```
+hours   = 00
+minutes = 00
+seconds = 00
+```
+
+---
+
+### **During Simulation**
+
+* Seconds increment every simulated second
+* Minutes increment when seconds roll over from 59 → 00
+* Hours increment when minutes roll over from 59 → 00
+* After `23:59:59`, time resets to `00:00:00`
+
+---
+
+## **3.8 Observability in Waveform**
+
+Key signals to observe:
+
+* `clk`
+* `reset`
+* `seconds`
+* `minutes`
+* `hours`
+
+Correct operation is confirmed if:
+
+* Counters increment only on `one_sec_tick`
+* Rollovers occur at correct limits
+* No glitches or invalid values appear
+
+---
+
+## **3.9 Summary**
+
+* Testbench verifies complete time progression
+* Simulation time is efficiently scaled
+* Rollover logic validated
+* Reset behavior confirmed
+* Design behaves deterministically and safely
+
+---
+<img width="1642" height="882" alt="image" src="https://github.com/user-attachments/assets/112c55ac-531b-4f0f-a820-eae0cf122767" />
+<img width="1639" height="876" alt="image" src="https://github.com/user-attachments/assets/b6e5fb20-e20f-48e8-9bea-352799d5eb3c" />
+<img width="1641" height="879" alt="image" src="https://github.com/user-attachments/assets/57ab1ffb-9b38-475d-9267-b029dd67f942" />
+<img width="1642" height="876" alt="image" src="https://github.com/user-attachments/assets/1b4386e5-b81a-4194-a0ec-d5b89f118477" />
+
+<img width="1642" height="876" alt="image" src="https://github.com/user-attachments/assets/3e65c3db-e443-4205-9ecb-136becc500ab" />
+<img width="1643" height="878" alt="image" src="https://github.com/user-attachments/assets/c4f1e227-a6e9-4438-b27f-35cbbf38fbfd" />
+<img width="1641" height="879" alt="image" src="https://github.com/user-attachments/assets/88c7a27d-38d5-44af-9660-e19ca00bc5dc" />
+<img width="1642" height="881" alt="image" src="https://github.com/user-attachments/assets/0e68b4ef-b8e5-4efb-8312-7123c6fe0520" />
+
+# **Part 7: Constraints**
+
+```verilog
+create_clock -period 10 -name clk [get_ports clk]
+
+set_property PACKAGE_PIN E3 [get_ports clk]
+set_property PACKAGE_PIN J15 [get_ports reset]
+set_property PACKAGE_PIN V11 [get_ports {hours[4]}]
+set_property PACKAGE_PIN V12 [get_ports {hours[3]}]
+set_property PACKAGE_PIN V14 [get_ports {hours[2]}]
+set_property PACKAGE_PIN V15 [get_ports {hours[1]}]
+set_property PACKAGE_PIN T16 [get_ports {hours[0]}]
+set_property PACKAGE_PIN U14 [get_ports {minutes[5]}]
+set_property PACKAGE_PIN T15 [get_ports {minutes[4]}]
+set_property PACKAGE_PIN V16 [get_ports {minutes[3]}]
+set_property PACKAGE_PIN U16 [get_ports {minutes[2]}]
+set_property PACKAGE_PIN U17 [get_ports {minutes[1]}]
+set_property PACKAGE_PIN V17 [get_ports {minutes[0]}]
+set_property PACKAGE_PIN R18 [get_ports {seconds[5]}]
+set_property PACKAGE_PIN N14 [get_ports {seconds[4]}]
+set_property PACKAGE_PIN J13 [get_ports {seconds[3]}]
+set_property PACKAGE_PIN K15 [get_ports {seconds[2]}]
+set_property PACKAGE_PIN H17 [get_ports {seconds[1]}]
+set_property PACKAGE_PIN N16 [get_ports {seconds[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports clk]
+set_property IOSTANDARD LVCMOS33 [get_ports reset]
+set_property IOSTANDARD LVCMOS33 [get_ports {hours[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {hours[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {hours[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {hours[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {hours[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {minutes[0]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[5]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[4]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[3]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[2]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[1]}]
+set_property IOSTANDARD LVCMOS33 [get_ports {seconds[0]}]
+set_property DRIVE 12 [get_ports {hours[4]}]
+set_property DRIVE 12 [get_ports {hours[3]}]
+set_property DRIVE 12 [get_ports {hours[2]}]
+set_property DRIVE 12 [get_ports {hours[1]}]
+set_property DRIVE 12 [get_ports {hours[0]}]
+set_property DRIVE 12 [get_ports {minutes[5]}]
+set_property DRIVE 12 [get_ports {minutes[4]}]
+set_property DRIVE 12 [get_ports {minutes[3]}]
+set_property DRIVE 12 [get_ports {minutes[2]}]
+set_property DRIVE 12 [get_ports {minutes[1]}]
+set_property DRIVE 12 [get_ports {minutes[0]}]
+set_property DRIVE 12 [get_ports {seconds[5]}]
+set_property DRIVE 12 [get_ports {seconds[4]}]
+set_property DRIVE 12 [get_ports {seconds[3]}]
+set_property DRIVE 12 [get_ports {seconds[2]}]
+set_property DRIVE 12 [get_ports {seconds[1]}]
+set_property DRIVE 12 [get_ports {seconds[0]}]
+set_property SLEW SLOW [get_ports {hours[4]}]
+set_property SLEW SLOW [get_ports {hours[3]}]
+set_property SLEW SLOW [get_ports {hours[2]}]
+set_property SLEW SLOW [get_ports {hours[1]}]
+set_property SLEW SLOW [get_ports {hours[0]}]
+set_property SLEW SLOW [get_ports {minutes[5]}]
+set_property SLEW SLOW [get_ports {minutes[4]}]
+set_property SLEW SLOW [get_ports {minutes[3]}]
+set_property SLEW SLOW [get_ports {minutes[2]}]
+set_property SLEW SLOW [get_ports {minutes[1]}]
+set_property SLEW SLOW [get_ports {minutes[0]}]
+set_property SLEW SLOW [get_ports {seconds[5]}]
+set_property SLEW SLOW [get_ports {seconds[4]}]
+set_property SLEW SLOW [get_ports {seconds[3]}]
+set_property SLEW SLOW [get_ports {seconds[2]}]
+set_property SLEW SLOW [get_ports {seconds[1]}]
+set_property SLEW SLOW [get_ports {seconds[0]}]
+```
+
+<img width="1640" height="884" alt="image" src="https://github.com/user-attachments/assets/718a6b27-e53f-4bb8-9ced-82055bff4cd8" />
+
+<img width="1641" height="876" alt="image" src="https://github.com/user-attachments/assets/c0730e9b-4a5f-4161-a736-ea8d00879be4" />
+
+<img width="1641" height="876" alt="image" src="https://github.com/user-attachments/assets/1c4603be-55db-4d5b-93e3-8c7cf42123d8" />
+<img width="1641" height="876" alt="image" src="https://github.com/user-attachments/assets/81b6b152-0798-46c6-be07-bcf09c85b765" />
+<img width="816" height="171" alt="image" src="https://github.com/user-attachments/assets/ca455842-60d2-48e8-b7f0-d0e79fd43813" />
 
 
