@@ -1,7 +1,5 @@
 # **PART 1: THEORY, ARCHITECTURE, FSM DESIGN**
 
-**Four-Way Traffic Light Controller**
-
 ---
 
 ## **1. Concept / System Overview**
@@ -195,6 +193,7 @@ Each timer produces a completion signal:
 | `res_cnt5` | Blink interval completed                 |
 
 These flags form the **primary interface between the datapath and control path**.
+
 ---
 
 ## **6.7 Datapath Design Characteristics**
@@ -393,7 +392,7 @@ The four-way traffic light controller is designed to meet the following requirem
 
 ---
 
-## **2.3 Internal Signal Classification **
+## **2.3 Internal Signal Classification**
 
 ### **Timing Datapath Signals**
 
@@ -461,7 +460,7 @@ The four-way traffic light controller is designed to meet the following requirem
 `define time_base 22'd4999999
 
 /* For simulation clock which is 50GHz or 20ps, count of 5 enough for time base of 0.1ns, which is simulation friendly 
-`define time_base 23'd4 */
+/* `define time_base 23'd4 */
 
 /* Timer count values (in units of 0.1 s) */
 `define load_cnt2 9'd449   // 45 seconds
@@ -845,7 +844,7 @@ end
 end
 
 /*--------------------------------------------------
-  S8 : Side road 1 left turn (10s)
+  S8 : Side road 1 left turn (25s)
 --------------------------------------------------*/
 `S8: begin
     if (blink)
@@ -902,7 +901,7 @@ end
 end
 
 /*--------------------------------------------------
-  S10 : Side road 2 left turn (10s)
+  S10 : Side road 2 left turn (25s)
 --------------------------------------------------*/
 `S10: begin
     if (blink)
@@ -1320,6 +1319,8 @@ Signals to observe in the waveform:
 
 # **PART 4: WAVEFORM & TIMING EXPLANATION**
 
+<img width="1643" height="883" alt="image" src="https://github.com/user-attachments/assets/1dab4371-0054-4a66-8b17-f50164a220eb" />
+
 ---
 
 ## **4.1 Overview of Observed Simulation**
@@ -1486,4 +1487,191 @@ This validates:
 * ✔ Safe traffic signal sequencing
 * ✔ Reliable blink mode operation
 
-The simulation waveforms fully validate the **functional correctness and timing integrity** of the four-way traffic light controller design.
+---
+
+# **PART 5: Viva Questions, Interview Questions, Debug Scenarios & Design Variations**
+
+---
+
+## **A) Viva Questions (University / Lab-Oriented)**
+
+1. What is a traffic light controller?
+2. Why is a traffic light controller a sequential circuit?
+3. Why is an FSM required in traffic control systems?
+4. What does each state represent in this design?
+5. How many states are used in this controller and why?
+6. Why are yellow lights mandatory between green and red phases?
+7. What is the role of timers in this controller?
+8. Why is a 0.1 s time base used instead of seconds directly?
+9. How is long-duration timing generated from a 50 MHz clock?
+10. What happens to the FSM and outputs during reset?
+11. Why is blink mode required in traffic light systems?
+12. How does the FSM handle priority for blink mode?
+13. Why are outputs registered in this design?
+14. Why is this controller implemented as a Moore FSM?
+15. What happens if two green signals turn ON together?
+16. Why are multiple timers used instead of a single timer?
+17. What is the role of `start_timer_*` signals?
+18. How does the FSM know when to change states?
+19. What happens if a timer never reaches terminal count?
+20. Can this controller work without a clock? Why?
+
+---
+
+## **B) Interview-Style Questions (VLSI / Industry)**
+
+### **FSM & Architecture**
+
+1. Why is a Moore FSM preferred over a Mealy FSM for traffic controllers?
+2. How would this design change if implemented as a Mealy machine?
+3. How would you reduce the number of FSM states?
+4. Can this design be parameterized for different timings?
+5. What is the latency of one complete traffic cycle?
+6. What defines throughput in a traffic controller?
+7. How would you add pedestrian crossing support?
+8. How would you add emergency vehicle priority?
+
+---
+
+### **Timing & Simulation**
+
+9. Why is counter-based timing preferred over delay-based timing?
+10. Why is time scaling required during simulation?
+11. How do you verify timing correctness in simulation?
+12. What happens if `blink` toggles close to a clock edge?
+13. How would you make this design robust to asynchronous inputs?
+
+---
+
+### **Synthesis & Hardware**
+
+14. What hardware components are inferred from this design?
+15. How many flip-flops are required approximately?
+16. What combinational logic dominates the critical path?
+17. How would this map onto FPGA LUTs?
+18. What limits the maximum operating frequency?
+
+---
+
+### **Verification**
+
+19. How would you verify all FSM states are reachable?
+20. What corner cases exist in this controller?
+21. How would you verify reset behavior?
+22. How would you verify mutual exclusion of green signals?
+23. How would you write a self-checking testbench?
+24. How would you use assertions in this design?
+
+---
+
+## **C) Debug Scenarios (Very Important)**
+
+*(Recognizing real-world bugs)*
+
+### **Bug 1: Conflicting Green Signals**
+
+* **Problem:** Two green signals ON simultaneously
+* **Cause:** Missing deassertion in FSM state
+* **Fix:** Assign all outputs in every state
+
+---
+
+### **Bug 2: FSM Stuck in One State**
+
+* **Problem:** No state transitions
+* **Cause:** Timer enable not asserted
+* **Fix:** Verify `start_timer_*` logic
+
+---
+
+### **Bug 3: Yellow Lights Flicker**
+
+* **Problem:** Unstable yellow output
+* **Cause:** Combinational output logic
+* **Fix:** Register outputs in FSM
+
+---
+
+### **Bug 4: Blink Mode Never Exits**
+
+* **Problem:** Controller stuck in blink
+* **Cause:** Missing exit condition
+* **Fix:** Add transition when `blink = 0`
+
+---
+
+### **Bug 5: Incorrect Timing Duration**
+
+* **Problem:** Phases too short/long
+* **Cause:** Wrong counter limits or clock assumptions
+* **Fix:** Recalculate timing constants
+
+---
+
+### **Bug 6: Outputs Become X in Simulation**
+
+* **Problem:** Undefined outputs
+* **Cause:** No reset initialization
+* **Fix:** Initialize all outputs on reset
+
+---
+
+### **Bug 7: FSM Skips States**
+
+* **Problem:** Missing traffic phases
+* **Cause:** Multiple transition conditions true
+* **Fix:** Ensure mutually exclusive conditions
+
+---
+
+## **D) Design Variations**
+
+### **Moore vs Mealy Traffic Controller**
+
+| Feature          | Moore           | Mealy            |
+| ---------------- | --------------- | ---------------- |
+| Output stability | High            | Lower            |
+| Safety           | Higher          | Risk of glitches |
+| Latency          | Slightly higher | Lower            |
+
+---
+
+### **Other Variations**
+
+* Three-way traffic light controller
+* Pedestrian signal integration
+* Sensor-based adaptive controller
+* Emergency override system
+* Parameterized timing controller
+
+---
+
+## **E) Conceptual Questions (Deep Understanding)**
+
+1. Why does traffic control favor safety over latency?
+2. How does FSM abstraction simplify control logic?
+3. Why are registered outputs critical in safety systems?
+4. How would metastability affect this design?
+5. How would this controller integrate into a smart city system?
+
+---
+
+## **F) If This Were in a Real Chip…**
+
+You would additionally consider:
+
+✔ Clock gating for power reduction
+✔ Reset synchronization
+✔ CDC handling for blink input
+✔ Formal verification of FSM
+✔ Assertion-based safety checks
+✔ Fault tolerance and watchdog timers
+
+---
+
+# **Part 6: Schematics**
+
+---
+
+## **RTL Schematic**
+<img width="1920" height="1038" alt="image" src="https://github.com/user-attachments/assets/6f004f7e-4977-4017-895c-8b7c7a35dc43" />
