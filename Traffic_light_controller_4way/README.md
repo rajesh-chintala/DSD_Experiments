@@ -389,7 +389,7 @@ When `blink` is deasserted, the FSM exits blink mode and resumes normal operatio
 
 <img width="475" height="791" alt="image" src="https://github.com/user-attachments/assets/478a1b78-c769-46bf-af1a-6926d3a460b8" />
 
-<img width="513" height="781" alt="image" src="https://github.com/user-attachments/assets/b876c9d7-ebeb-4731-979f-3f740a1ee935" />
+<img width="508" height="794" alt="image" src="https://github.com/user-attachments/assets/fb1cb3bf-cca7-45b1-a8e4-85562a7f26a6" />
 
 <img width="292" height="311" alt="image" src="https://github.com/user-attachments/assets/ae7c1940-0cac-4b49-a6a9-9ef5654a32df" />
 
@@ -1239,9 +1239,9 @@ In real hardware:
 * Internal time base = **0.1 s**
 
 To generate this time base:
-[
+```math
 \frac{0.1\ \text{s}}{20\ \text{ns}} = 5{,}000{,}000\ \text{clock cycles}
-]
+```
 
 Simulating millions of clock cycles for each FSM transition is **computationally expensive** and impractical in RTL simulation.
 
@@ -1264,9 +1264,9 @@ Thus, the simulation clock is a **time-scaled equivalent** of the real hardware 
 Target simulation time base = **0.1 ns**
 
 Number of clock cycles required:
-[
+```math
 \frac{0.1\ \text{ns}}{20\ \text{ps}} = 5\ \text{clock cycles}
-]
+```
 
 Hence, a counter value of **5** in simulation represents one **0.1 ns time tick**, which is a scaled equivalent of the **0.1 s hardware time base**.
 
